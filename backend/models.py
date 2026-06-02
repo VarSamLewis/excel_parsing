@@ -187,26 +187,6 @@ class RowLineage(BaseModel):
 # ── API Request / Response ──────────────────────────────────────────
 
 
-class IngestRequest(BaseModel):
-    """Body of POST /ingest."""
-
-    schema_definition: SchemaDefinition = Field(
-        ..., alias="schema", description="Schema defining the fields to extract"
-    )
-
-    model_config = {"populate_by_name": True}
-
-
-class ExtractRequest(BaseModel):
-    """Body of POST /extract — manual override flow."""
-
-    excel_hash: str = Field(
-        ..., description="SHA-256 hash (first 16 chars) of the Excel file"
-    )
-    schema_id: str = Field(..., description="ID of the schema used")
-    mapping: ExcelMapping = Field(..., description="User-corrected mapping to apply")
-
-
 class SheetResult(BaseModel):
     """Extraction result for a single sheet."""
 
@@ -248,45 +228,3 @@ class IngestResponse(BaseModel):
     )
     run_id: str = ""
     created_at: datetime | None = None
-
-
-class ErrorResponse(BaseModel):
-    """Standard error response body."""
-
-    success: bool = False
-    error: str = ""
-    detail: str = ""
-
-
-class ExcelSchemaColumnSummary(BaseModel):
-    """Column-level summary for a sheet."""
-
-    column_letter: str
-    header: str | None = None
-    non_empty_count: int = 0
-    first_values: list[str] = Field(default_factory=list)
-    last_values: list[str] = Field(default_factory=list)
-    dominant_type: str | None = None
-    type_inconsistencies: str | None = None
-    distinct_values: list[str] | None = None
-
-
-class ExcelSheetSchema(BaseModel):
-    """Normalized schema summary for one worksheet."""
-
-    sheet_name: str
-    total_rows: int = 0
-    total_cols: int = 0
-    header_row: int = 0
-    data_start_row: int = 0
-    columns: list[ExcelSchemaColumnSummary] = Field(default_factory=list)
-
-
-class ExcelSchemaResponse(BaseModel):
-    """Response body for POST /excel-schema."""
-
-    excel_hash: str
-    excel_schema_hash: str
-    sheet_names: list[str] = Field(default_factory=list)
-    processed_sheet_names: list[str] = Field(default_factory=list)
-    sheets: list[ExcelSheetSchema] = Field(default_factory=list)

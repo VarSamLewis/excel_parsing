@@ -17,11 +17,10 @@ Current state is strong for local demos and iteration:
 - **Clear backend/CLI split**: business logic is centered in `backend/main.py` and reusable from CLI.
 - **Good local observability**: structured stdout logs plus SQLite metadata logs in `backend/data/ingest_logs.db`.
 - **Useful verification flow**: deterministic prechecks + optional LLM narrative for anomaly cases.
-- **Practical artifacts**: `run_ingest.py`, `ingest_output.json`, optional `verification_report.md` are demo-friendly.
+- **Practical artifacts**: `ingest_<excelname>.py`, `ingest_<excelname>.json`, optional `verification_report.md` are demo-friendly.
 
 Notable cleanup opportunities:
 
-- `cli/README.md` is stale (mentions removed flags and old artifact behavior).
 - `docs/testing-and-deployment.md` and `docs/technical-approach.md` contain outdated references (cache/old outputs).
 - Runtime artifacts are currently tracked in git in this repo state (`uploads/`, sqlite db, generated files); add/adjust `.gitignore` as needed.
 
@@ -79,7 +78,7 @@ uv run uvicorn backend.main:app --reload --port 8000
 4) Generate sample test files (optional)
 
 ```bash
-python3 generate_test_excels.py
+python3 generate_test_excels.py --out-dir ./tmp_excels
 ```
 
 ## CLI Usage
@@ -96,7 +95,7 @@ Health check:
 python3 cli/excel_ingest_cli.py health
 ```
 
-Ingest (writes `run_ingest.py` + `ingest_output.json`):
+Ingest (writes `ingest_<excelname>.py` + `ingest_<excelname>.json`):
 
 ```bash
 python3 cli/excel_ingest_cli.py ingest \
@@ -115,11 +114,21 @@ python3 cli/excel_ingest_cli.py ingest \
   --verify
 ```
 
+Ingest all `.xlsx` files in a directory:
+
+```bash
+python3 cli/excel_ingest_cli.py ingest-dir \
+  --schema-file ./test_schemas/sales_sample.schema.json \
+  --excel-dir ./tmp_excels \
+  --out-dir ./artifacts/batch
+```
+
 Outputs in `--out-dir`:
 
-- `run_ingest.py`
-- `ingest_output.json`
-- `verification_report.md` (when `--verify`)
+- `ingest_<excelname>.py`
+- `ingest_<excelname>.json`
+- `ingest_output_<excelname>.json` (when `--verify`)
+- `verification_report_<excelname>.md` (when `--verify`)
 
 ## Schema Commands
 
@@ -137,6 +146,7 @@ python3 cli/excel_ingest_cli.py schemas clear --yes
 python3 cli/excel_ingest_cli.py logs runs --limit 20
 python3 cli/excel_ingest_cli.py logs run --run-id run_abc123
 python3 cli/excel_ingest_cli.py logs usage --since-hours 24
+python3 cli/excel_ingest_cli.py logs runs --limit 20 --json
 ```
 
 ## Tests

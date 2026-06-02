@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import argparse
 from datetime import date
 from pathlib import Path
 
@@ -41,43 +42,24 @@ def _write_people_workbook(path: Path) -> None:
     wb.save(path)
 
 
-def _write_multi_sheet_workbook(path: Path) -> None:
-    """Create multi-sheet workbook; args: path (Path); returns: None."""
-    wb: Workbook = Workbook()
-    ws_orders_candidate: Worksheet | None = wb.active
-    if ws_orders_candidate is None:
-        raise RuntimeError("Workbook has no active worksheet")
-    ws_orders: Worksheet = ws_orders_candidate
-    ws_orders.title = "Orders"
-    ws_orders.append(["order_id", "customer", "total"])
-    ws_orders.append([1001, "Acme Ltd", 249.99])
-    ws_orders.append([1002, "Globex", 499.50])
-
-    ws_inventory: Worksheet = wb.create_sheet("Inventory")
-    ws_inventory.append(["sku", "item_name", "qty", "warehouse"])
-    ws_inventory.append(["SKU-001", "Widget A", 120, "North"])
-    ws_inventory.append(["SKU-002", "Widget B", 80, "South"])
-    wb.save(path)
-
-
 def main() -> int:
     """Generate sample Excel set; args: none; returns: int."""
-    out_dir: Path = Path("test_excels")
+    parser: argparse.ArgumentParser = argparse.ArgumentParser()
+    parser.add_argument("--out-dir", default="test_excels", help="Output directory")
+    args: argparse.Namespace = parser.parse_args()
+    out_dir: Path = Path(str(args.out_dir))
     out_dir.mkdir(parents=True, exist_ok=True)
 
     sales_path: Path = out_dir / "sales_sample.xlsx"
     people_path: Path = out_dir / "people_sample.xlsx"
-    multi_path: Path = out_dir / "multi_sheet_sample.xlsx"
 
     _write_sales_workbook(sales_path)
     _write_people_workbook(people_path)
-    _write_multi_sheet_workbook(multi_path)
 
     print(f"Wrote {sales_path}")
     print(f"Wrote {people_path}")
-    print(f"Wrote {multi_path}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

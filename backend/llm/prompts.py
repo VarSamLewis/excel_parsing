@@ -172,9 +172,9 @@ Name: {schema_name}
 Fields:
 {fields_text}
 
-## Workbook sheet summaries
+## Sheet summary
 
-{sheet_summaries_text}
+{sheet_summary_text}
 
 ## Required generated script interface
 
@@ -182,7 +182,7 @@ Fields:
 - Define `OUT_PATH = Path("ingest_output.json")`
 - Define a `main() -> int` function
 - On success write JSON output and print `Wrote {{OUT_PATH}}`
-- Include `if __name__ == "__main__": raise SystemExit(main())`
+- Include `if __name__ == "__main__": main()`
 """
 
 
@@ -328,29 +328,28 @@ def build_validator_prompt(
 def build_codegen_prompt(
     schema_name: str,
     fields: list[dict[str, object]],
-    sheet_summaries: list[dict[str, object]],
+    sheet_summary: dict[str, object],
+    code_template: str | None = None,
 ) -> tuple[str, str]:
-    """Build codegen prompts; args: schema_name (str), fields (list[dict[str, object]]), sheet_summaries (list[dict[str, object]]); returns: tuple[str, str]."""
+    """Build codegen prompts; args: schema_name (str), fields (list[dict[str, object]]), sheet_summary (dict[str, object]), code_template (str | None); returns: tuple[str, str]."""
     fields_text: str = format_fields_for_prompt(fields)
-    blocks: list[str] = []
-    summary: dict[str, object]
-    for summary in sheet_summaries:
-        cols_raw: object = summary.get("columns", [])
-        cols: list[dict[str, object]] = cast(list[dict[str, object]], cols_raw)
-        cols_text: str = format_column_summaries(cols)
-        blocks.append(
-            f"Sheet: {summary.get('sheet_name')}\n"
-            f"Header row: {summary.get('header_row')}\n"
-            f"Data start row: {summary.get('data_start_row')}\n"
-            f"Columns:\n{cols_text}"
-        )
-    sheet_summaries_text: str = "\n\n---\n\n".join(blocks)
-    user_prompt: str = CODEGEN_USER_PROMPT.format(
+    cols_raw: object = sheet_summary.get("columns", [])
+    cols: list[dict[str, object]] = cast(list[dict[str, object]], cols_raw)
+    cols_text: str = format_column_summaries(cols)
+    sheet_summary_text: str = (
+        f"Sheet: {sheet_summary.get('sheet_name')}\n"
+        f"Header row: {sheet_summary.get('header_row')}\n"
+        f"Data start row: {sheet_summary.get('data_start_row')}\n"
+        f"Columns:\n{cols_text}"
+    )
+    base_prompt: str = CODEGEN_USER_PROMPT.format(
         schema_name=schema_name,
         fields_text=fields_text,
-        sheet_summaries_text=sheet_summaries_text,
+        sheet_summary_text=sheet_summary_text,
     )
-    return CODEGEN_SYSTEM_PROMPT, user_prompt
+    if code_template:
+        base_prompt += f"\n\n## Code structure to follow\n\nFollow this structure exactly:\n\n{code_template}"
+    return CODEGEN_SYSTEM_PROMPT, base_prompt
 
 
 def build_verify_prompt(

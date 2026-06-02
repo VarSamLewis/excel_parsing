@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
 from backend.models import (
-    ExcelSchemaResponse,
     ExcelMapping,
     IngestResponse,
     SchemaDefinition,
@@ -20,9 +19,7 @@ from backend.models import (
 )
 from backend.excel_processor import (
     compute_file_hash,
-    compute_schema_hash,
     get_sheet_names,
-    summarise_sheet,
 )
 from backend.llm.mapper import generate_ingest_code, infer_mapping
 from backend.llm.validator import validate_extraction, verify_generated_output
@@ -63,9 +60,8 @@ def _build_replay_code(
     backend_base_url: str,
     schema_name: str,
     schema_json: dict[str, object],
-    selected_sheets: str,
 ) -> str:
-    """Build replay script text; args: backend_base_url (str), schema_name (str), schema_json (dict[str, object]), selected_sheets (str); returns: str."""
+    """Build replay script text; args: backend_base_url (str), schema_name (str), schema_json (dict[str, object]); returns: str."""
     script: str = f"""#!/usr/bin/env python3
 import json
 from pathlib import Path
@@ -75,7 +71,6 @@ import httpx
 BACKEND_URL = {backend_base_url!r}
 SCHEMA_NAME = {schema_name!r}
 SCHEMA_JSON = {json.dumps(schema_json, indent=2)}
-SELECTED_SHEETS = {selected_sheets!r}
 EXCEL_PATH = Path("input.xlsx")
 OUT_PATH = Path("ingest_output.json")
 
@@ -85,9 +80,6 @@ def main() -> int:
         "schema_name": SCHEMA_NAME,
         "schema_json": json.dumps(SCHEMA_JSON),
     }}
-    if SELECTED_SHEETS:
-        params["selected_sheets"] = SELECTED_SHEETS
-
     files = {{
         "file": (
             EXCEL_PATH.name,
@@ -95,7 +87,6 @@ def main() -> int:
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
     }}
-
     with httpx.Client(timeout=600.0) as client:
         resp = client.post(f"{{BACKEND_URL}}/ingest", params=params, files=files)
         resp.raise_for_status()
@@ -107,7 +98,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
 """
     return script
 
@@ -146,48 +137,6 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/excel-schema", response_model=ExcelSchemaResponse)
-async def excel_schema(
-    file: UploadFile = File(...),
-    selected_sheets: str = Query(
-        default="", description="Comma-separated sheet names to process (empty = all)"
-    ),
-    user: dict[str, str] = Depends(get_user),
-) -> ExcelSchemaResponse:
-    """Build workbook schema summary; args: file (UploadFile), selected_sheets (str), user (dict[str, str]); returns: ExcelSchemaResponse."""
-    _ = user  # Keep auth dependency behaviour consistent with other routes.
-    file_bytes = await file.read()
-    file_hash = compute_file_hash(file_bytes)
-
-    all_sheet_names = get_sheet_names(file_bytes)
-    if selected_sheets:
-        sheets_to_process = [s.strip() for s in selected_sheets.split(",") if s.strip()]
-        invalid = [s for s in sheets_to_process if s not in all_sheet_names]
-        if invalid:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Sheets not found: {invalid}. Available: {all_sheet_names}",
-            )
-    else:
-        sheets_to_process = all_sheet_names
-
-    summaries = [summarise_sheet(file_bytes, sheet_name=s) for s in sheets_to_process]
-    schema_payload = {
-        "sheet_names": all_sheet_names,
-        "processed_sheet_names": sheets_to_process,
-        "sheets": summaries,
-    }
-    schema_hash = compute_schema_hash(schema_payload)
-
-    return ExcelSchemaResponse(
-        excel_hash=file_hash,
-        excel_schema_hash=schema_hash,
-        sheet_names=all_sheet_names,
-        processed_sheet_names=sheets_to_process,
-        sheets=summaries,
-    )
-
-
 # ── Ingestion ───────────────────────────────────────────────────────
 
 
@@ -197,20 +146,20 @@ async def ingest(
     file: UploadFile = File(...),
     schema_name: str = Query(..., description="Schema name"),
     schema_json: str = Query(..., description="JSON-encoded schema definition"),
-    selected_sheets: str = Query(
-        default="", description="Comma-separated sheet names to process (empty = all)"
+    code_template: str = Query(
+        default="",
+        description="Optional code template to guide generated script structure",
     ),
     user: dict[str, str] = Depends(get_user),
 ) -> IngestResponse:
     """Map + extract + validate an Excel file against a schema.
 
-    Processes each sheet independently with its own mapping call.
-
     Flow:
     1. Hash the file and store the upload
-    2. Discover sheets (filter by selected_sheets if provided)
-    3. For each sheet: infer mapping, extract, validate
-    4. Aggregate results and return
+    2. Pick the first sheet in the workbook
+    3. Generate replay code
+    4. Infer mapping, extract, validate
+    5. Return response
     """
     fstore: LocalFileStore = _get_file_store()
     file_bytes: bytes = await file.read()
@@ -248,24 +197,20 @@ async def ingest(
             detail="OpenAI is not configured. Set OPENAI_API_KEY.",
         )
 
-    # 3. Discover sheets
+    # 3. Pick the first sheet
     all_sheet_names = get_sheet_names(file_bytes)
-    if selected_sheets:
-        sheets_to_process = [s.strip() for s in selected_sheets.split(",") if s.strip()]
-        # Validate sheet names
-        invalid = [s for s in sheets_to_process if s not in all_sheet_names]
-        if invalid:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Sheets not found: {invalid}. Available: {all_sheet_names}",
-            )
-    else:
-        sheets_to_process = all_sheet_names
+    sheet_name = all_sheet_names[0] if all_sheet_names else ""
+    if not sheet_name:
+        raise HTTPException(status_code=422, detail="Workbook has no sheets")
 
     with OperationTimer("llm_codegen", logger, schema_id=schema_id, run_id=run_id):
         try:
             replay_code = generate_ingest_code(
-                file_bytes, schema, sheets_to_process, run_id=run_id
+                file_bytes,
+                schema,
+                sheet_name,
+                run_id=run_id,
+                code_template=code_template or None,
             )
         except Exception as exc:
             raise HTTPException(
@@ -274,104 +219,65 @@ async def ingest(
             )
 
     log_event(
-        "sheets_discovered",
+        "sheet_selected",
         logger,
+        sheet_name=sheet_name,
         file_hash=file_hash,
-        sheet_count=len(sheets_to_process),
     )
 
-    # 4. Process each sheet independently
-    sheet_results: list[SheetResult] = []
-    all_data: list[dict] = []
-    all_lineage = []
-    first_mapping = None
-
-    for sheet_name in sheets_to_process:
-        log_event(
-            "sheet_processing_started",
-            logger,
-            sheet_name=sheet_name,
-            file_hash=file_hash,
-        )
-
-        # 5a. Infer mapping for this sheet
-        with OperationTimer(
-            "llm_mapping",
-            logger,
-            sheet_name=sheet_name,
-            schema_id=schema_id,
-            run_id=run_id,
-        ):
-            try:
-                mapping = infer_mapping(file_bytes, schema, sheet_name=sheet_name)
-            except Exception as e:
-                logger.error("Mapping failed for sheet '%s': %s", sheet_name, e)
-                sheet_results.append(
-                    SheetResult(
-                        sheet_name=sheet_name,
-                        mapping=None,
-                        data=[],
-                        row_count=0,
-                    )
-                )
-                continue
-
-        if first_mapping is None:
-            first_mapping = mapping
-
-        # 5b. Extract data from this sheet
-        with OperationTimer("extraction", logger, sheet_name=sheet_name, run_id=run_id):
-            try:
-                data_rows, lineage = extract(file_bytes, file_hash, mapping)
-            except Exception as e:
-                logger.error("Extraction failed for sheet '%s': %s", sheet_name, e)
-                sheet_results.append(
-                    SheetResult(
-                        sheet_name=sheet_name,
-                        mapping=mapping,
-                        data=[],
-                        row_count=0,
-                    )
-                )
-                continue
-
-        # 5c. Validate this sheet's extraction
-        with OperationTimer(
-            "llm_validation", logger, sheet_name=sheet_name, run_id=run_id
-        ):
-            try:
-                validation = validate_extraction(schema, data_rows, run_id=run_id)
-            except Exception as e:
-                logger.warning(
-                    "Validation failed for sheet '%s' (non-fatal): %s", sheet_name, e
-                )
-                validation = None
-
-        log_event(
-            "sheet_processing_completed",
-            logger,
-            sheet_name=sheet_name,
-            row_count=len(data_rows),
-            confidence=validation.confidence if validation else None,
-        )
-
-        sheet_results.append(
-            SheetResult(
-                sheet_name=sheet_name,
-                mapping=mapping,
-                validation=validation,
-                data=data_rows,
-                lineage=lineage,
-                row_count=len(data_rows),
+    # 4. Infer mapping for the sheet
+    with OperationTimer(
+        "llm_mapping",
+        logger,
+        sheet_name=sheet_name,
+        schema_id=schema_id,
+        run_id=run_id,
+    ):
+        try:
+            mapping = infer_mapping(file_bytes, schema, sheet_name=sheet_name)
+        except Exception as e:
+            logger.error("Mapping failed for sheet '%s': %s", sheet_name, e)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Mapping failed: {e}",
             )
-        )
-        all_data.extend(data_rows)
-        all_lineage.extend(lineage)
 
-    # 5. Build aggregate response
-    # For backwards compatibility, the top-level fields reflect the first sheet
-    first_validation = next(
-        (sr.validation for sr in sheet_results if sr.validation), None
+    # 5. Extract data from the sheet
+    with OperationTimer("extraction", logger, sheet_name=sheet_name, run_id=run_id):
+        try:
+            data_rows, lineage = extract(file_bytes, file_hash, mapping)
+        except Exception as e:
+            logger.error("Extraction failed for sheet '%s': %s", sheet_name, e)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Extraction failed: {e}",
+            )
+
+    # 6. Validate extraction
+    with OperationTimer("llm_validation", logger, sheet_name=sheet_name, run_id=run_id):
+        try:
+            validation = validate_extraction(schema, data_rows, run_id=run_id)
+        except Exception as e:
+            logger.warning(
+                "Validation failed for sheet '%s' (non-fatal): %s", sheet_name, e
+            )
+            validation = None
+
+    log_event(
+        "sheet_processing_completed",
+        logger,
+        sheet_name=sheet_name,
+        row_count=len(data_rows),
+        confidence=validation.confidence if validation else None,
+    )
+
+    sheet_result = SheetResult(
+        sheet_name=sheet_name,
+        mapping=mapping,
+        validation=validation,
+        data=data_rows,
+        lineage=lineage,
+        row_count=len(data_rows),
     )
 
     response = IngestResponse(
@@ -380,12 +286,12 @@ async def ingest(
         schema_id=schema_id,
         schema_version=schema_version,
         sheet_names=all_sheet_names,
-        sheets=sheet_results,
-        mapping=first_mapping,
-        validation=first_validation,
-        data=all_data,
-        lineage=all_lineage,
-        row_count=len(all_data),
+        sheets=[sheet_result],
+        mapping=mapping,
+        validation=validation,
+        data=data_rows,
+        lineage=lineage,
+        row_count=len(data_rows),
         file_storage_path=storage_path,
         replay_code=replay_code,
         run_id=run_id,
@@ -398,8 +304,7 @@ async def ingest(
         file_hash=file_hash,
         schema_id=schema_id,
         schema_version=schema_version,
-        row_count=len(all_data),
-        sheet_count=len(sheet_results),
+        row_count=len(data_rows),
         run_id=run_id,
     )
 

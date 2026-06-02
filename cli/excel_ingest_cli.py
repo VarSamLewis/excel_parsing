@@ -80,6 +80,17 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def _emit(data: Any, as_json: bool) -> None:
+    """Emit CLI output; args: data (Any), as_json (bool); returns: None."""
+    if as_json:
+        typer.echo(json.dumps(data, indent=2))
+        return
+    if isinstance(data, str):
+        typer.echo(data)
+    else:
+        typer.echo(str(data))
+
+
 def _default_replay_script(
     *, backend_url: str, schema_path: Path, excel_path: Path
 ) -> str:
@@ -119,7 +130,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
 """
 
 
@@ -258,7 +269,10 @@ def schemas_clear(
 
 
 @logs_app.command("runs")
-def logs_runs(limit: int = typer.Option(20, help="Max runs to show")) -> None:
+def logs_runs(
+    limit: int = typer.Option(20, help="Max runs to show"),
+    as_json: bool = typer.Option(False, "--json", help="Output JSON"),
+) -> None:
     """List recent run IDs; args: limit (int); returns: None."""
     con: sqlite3.Connection = _log_conn()
     cur: sqlite3.Cursor = con.cursor()
@@ -275,13 +289,32 @@ def logs_runs(limit: int = typer.Option(20, help="Max runs to show")) -> None:
     )
     rows: list[tuple[object, ...]] = cur.fetchall()
     con.close()
+    payload: list[dict[str, object]] = []
     for row in rows:
         run_id, started_at, ended_at, count = row
-        typer.echo(f"{run_id} start={started_at} end={ended_at} events={count}")
+        payload.append(
+            {
+                "run_id": run_id,
+                "started_at": started_at,
+                "ended_at": ended_at,
+                "event_count": count,
+            }
+        )
+    if as_json:
+        _emit(payload, True)
+        return
+    item: dict[str, object]
+    for item in payload:
+        typer.echo(
+            f"{item['run_id']} start={item['started_at']} end={item['ended_at']} events={item['event_count']}"
+        )
 
 
 @logs_app.command("run")
-def logs_run(run_id: str = typer.Option(..., help="Run ID")) -> None:
+def logs_run(
+    run_id: str = typer.Option(..., help="Run ID"),
+    as_json: bool = typer.Option(False, "--json", help="Output JSON"),
+) -> None:
     """Show events for one run; args: run_id (str); returns: None."""
     con: sqlite3.Connection = _log_conn()
     cur: sqlite3.Cursor = con.cursor()
@@ -291,13 +324,32 @@ def logs_run(run_id: str = typer.Option(..., help="Run ID")) -> None:
     )
     rows: list[tuple[object, ...]] = cur.fetchall()
     con.close()
+    payload: list[dict[str, object]] = []
     for row in rows:
         created_at, level, event, duration_ms = row
-        typer.echo(f"{created_at} {level} {event} duration_ms={duration_ms}")
+        payload.append(
+            {
+                "created_at": created_at,
+                "level": level,
+                "event": event,
+                "duration_ms": duration_ms,
+            }
+        )
+    if as_json:
+        _emit(payload, True)
+        return
+    item: dict[str, object]
+    for item in payload:
+        typer.echo(
+            f"{item['created_at']} {item['level']} {item['event']} duration_ms={item['duration_ms']}"
+        )
 
 
 @logs_app.command("usage")
-def logs_usage(since_hours: int = typer.Option(24, help="Window in hours")) -> None:
+def logs_usage(
+    since_hours: int = typer.Option(24, help="Window in hours"),
+    as_json: bool = typer.Option(False, "--json", help="Output JSON"),
+) -> None:
     """Show llm usage aggregates; args: since_hours (int); returns: None."""
     con: sqlite3.Connection = _log_conn()
     cur: sqlite3.Cursor = con.cursor()
@@ -313,64 +365,42 @@ def logs_usage(since_hours: int = typer.Option(24, help="Window in hours")) -> N
     )
     rows: list[tuple[object, ...]] = cur.fetchall()
     con.close()
+    payload: list[dict[str, object]] = []
     for row in rows:
         step, calls, total_tokens, avg_ms = row
         avg_latency: float = float(avg_ms) if isinstance(avg_ms, (int, float)) else 0.0
+        payload.append(
+            {
+                "step": step,
+                "calls": calls,
+                "total_tokens": total_tokens,
+                "avg_latency_ms": round(avg_latency, 2),
+            }
+        )
+    if as_json:
+        _emit(payload, True)
+        return
+    item: dict[str, object]
+    for item in payload:
         typer.echo(
-            f"step={step} calls={calls} total_tokens={total_tokens} avg_latency_ms={avg_latency:.2f}"
+            f"step={item['step']} calls={item['calls']} total_tokens={item['total_tokens']} avg_latency_ms={item['avg_latency_ms']}"
         )
-
-
-@app.command("excel-schema")
-def excel_schema(
-    excel_file: Path = typer.Option(..., exists=True, dir_okay=False),
-    selected_sheets: str | None = typer.Option(
-        None, help="Comma-separated sheet names (default all sheets)"
-    ),
-    out: Path = typer.Option(
-        Path("./artifacts/excel_schema.json"), help="Output JSON path"
-    ),
-    backend_url: str | None = typer.Option(None, help="Backend base URL"),
-) -> None:
-    """Request normalized workbook schema from backend."""
-    base = _backend_url(backend_url)
-    params: dict[str, str] = {}
-    if selected_sheets:
-        params["selected_sheets"] = selected_sheets
-
-    files = {
-        "file": (
-            excel_file.name,
-            excel_file.read_bytes(),
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-    }
-
-    try:
-        with httpx.Client(timeout=180.0) as client:
-            resp = client.post(f"{base}/excel-schema", params=params, files=files)
-            resp.raise_for_status()
-            payload = resp.json()
-        _write_json(out, payload)
-        typer.echo(f"Wrote {out}")
-        typer.echo(
-            f"excel_hash={payload.get('excel_hash')} excel_schema_hash={payload.get('excel_schema_hash')}"
-        )
-    except Exception as exc:
-        _handle_error(exc)
 
 
 @app.command("ingest")
 def ingest(
     schema_file: Path = typer.Option(..., exists=True, dir_okay=False),
     excel_file: Path = typer.Option(..., exists=True, dir_okay=False),
-    selected_sheets: str | None = typer.Option(
-        None, help="Comma-separated sheet names (default all sheets)"
-    ),
     out_dir: Path = typer.Option(Path("./artifacts"), help="Artifact output directory"),
     verify: bool = typer.Option(
         False,
         help="Run generated script and request verification markdown report",
+    ),
+    code_template: Path | None = typer.Option(
+        None,
+        exists=True,
+        dir_okay=False,
+        help="Optional code template file to guide generated script structure",
     ),
     backend_url: str | None = typer.Option(None, help="Backend base URL"),
 ) -> None:
@@ -385,8 +415,8 @@ def ingest(
         "schema_name": schema_name,
         "schema_json": json.dumps(schema_payload),
     }
-    if selected_sheets:
-        params["selected_sheets"] = selected_sheets
+    if code_template:
+        params["code_template"] = code_template.read_text(encoding="utf-8")
 
     files = {
         "file": (
@@ -426,7 +456,8 @@ def ingest(
     if verify:
         verify_input: Path = out_dir / "input.xlsx"
         verify_output: Path = out_dir / "ingest_output.json"
-        verify_report: Path = out_dir / "verification_report.md"
+        stemmed_output: Path = out_dir / f"ingest_output_{excel_name}.json"
+        verify_report: Path = out_dir / f"verification_report_{excel_name}.md"
         verify_input.write_bytes(excel_file.read_bytes())
         try:
             subprocess.run(
@@ -439,7 +470,9 @@ def ingest(
         except subprocess.CalledProcessError as exc:
             raise typer.BadParameter(f"Verification run failed: {exc.stderr}") from exc
 
-        output_payload: str = verify_output.read_text(encoding="utf-8")
+        if verify_output.exists():
+            verify_output.rename(stemmed_output)
+        output_payload: str = stemmed_output.read_text(encoding="utf-8")
         try:
             with httpx.Client(timeout=180.0) as client:
                 verify_resp = client.post(
@@ -472,11 +505,43 @@ def ingest(
         f"{float(confidence):.3f}" if isinstance(confidence, (int, float)) else "n/a"
     )
 
-    typer.echo(
-        f"Ingest OK: rows={row_count} sheets={sheets} confidence={confidence_str} issues={len(issues)}"
-    )
+    typer.echo(f"Ingest OK: rows={row_count} sheets={sheets}  issues={len(issues)}")
     typer.echo(f"Wrote {replay_out}")
     typer.echo(f"Wrote {ingest_out}")
+
+
+@app.command("ingest-dir")
+def ingest_dir(
+    schema_file: Path = typer.Option(..., exists=True, dir_okay=False),
+    excel_dir: Path = typer.Option(..., exists=True, file_okay=False),
+    out_dir: Path = typer.Option(Path("./artifacts"), help="Artifact output directory"),
+    verify: bool = typer.Option(
+        False,
+        help="Run generated script and request verification markdown report",
+    ),
+    code_template: Path | None = typer.Option(
+        None,
+        exists=True,
+        dir_okay=False,
+        help="Optional code template file to guide generated script structure",
+    ),
+    backend_url: str | None = typer.Option(None, help="Backend base URL"),
+) -> None:
+    """Run ingest for every .xlsx in a directory."""
+    files: list[Path] = sorted(excel_dir.glob("*.xlsx"))
+    if not files:
+        raise typer.BadParameter(f"No .xlsx files found in {excel_dir}")
+    excel_path: Path
+    for excel_path in files:
+        typer.echo(f"Processing {excel_path.name}...")
+        ingest(
+            schema_file=schema_file,
+            excel_file=excel_path,
+            out_dir=out_dir,
+            verify=verify,
+            code_template=code_template,
+            backend_url=backend_url,
+        )
 
 
 if __name__ == "__main__":

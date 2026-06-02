@@ -11,11 +11,11 @@ This project is a local-first Excel ingestion backend plus CLI.
 
 ## Pipeline
 
-1. Parse workbook and summarize sheets.
+1. Parse workbook and summarize the active sheet.
 2. Use LLM to infer mapping config against the target schema.
 3. Run deterministic extraction/transforms.
 4. Run validation on sampled extracted rows.
-5. Cache result by file hash + schema ID.
+5. Optionally run deterministic + LLM verification and produce markdown report.
 
 ## Why Local-Only
 
@@ -26,5 +26,5 @@ This project is a local-first Excel ingestion backend plus CLI.
 ## Operational Notes
 
 - `OPENAI_BASE_URL` is optional for OpenAI-compatible endpoints.
-- Logging is structured JSON to stdout.
+- Logging is structured JSON to stdout and metadata rows in `backend/data/ingest_logs.db`.
 - Auth is local stub user mode (`local-dev-user`).

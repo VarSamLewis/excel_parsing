@@ -43,8 +43,9 @@ uv run pytest tests/ -v
 python3 -m pip install -r cli/requirements.txt
 python3 cli/excel_ingest_cli.py health
 python3 cli/excel_ingest_cli.py schemas list
-python3 cli/excel_ingest_cli.py excel-schema --excel-file ./sample.xlsx
 python3 cli/excel_ingest_cli.py ingest --schema-file ./schema.json --excel-file ./sample.xlsx
+python3 cli/excel_ingest_cli.py ingest --schema-file ./schema.json --excel-file ./sample.xlsx --verify
+python3 cli/excel_ingest_cli.py logs runs --limit 10
 ```
 
-`ingest` writes `artifacts/excel_schema.json` and `artifacts/run_ingest.py` by default.
+`ingest` writes `artifacts/ingest_<excelname>.py` and `artifacts/ingest_<excelname>.json` by default.

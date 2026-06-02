@@ -188,13 +188,14 @@ def infer_mapping(
 def generate_ingest_code(
     file_bytes: bytes,
     schema: SchemaDefinition,
-    sheet_names: list[str],
+    sheet_name: str,
     run_id: str = "",
+    code_template: str | None = None,
 ) -> str:
-    """Generate Python ingest script; args: file_bytes (bytes), schema (SchemaDefinition), sheet_names (list[str]); returns: str."""
-    sheet_summaries: list[dict[str, object]] = [
-        summarise_sheet(file_bytes, sheet_name=name) for name in sheet_names
-    ]
+    """Generate Python ingest script; args: file_bytes (bytes), schema (SchemaDefinition), sheet_name (str), code_template (str | None); returns: str."""
+    sheet_summary: dict[str, object] = summarise_sheet(
+        file_bytes, sheet_name=sheet_name
+    )
     fields_dicts: list[dict[str, object]] = [
         {
             "name": field.name,
@@ -209,7 +210,8 @@ def generate_ingest_code(
     system_prompt, user_prompt = build_codegen_prompt(
         schema_name=schema.name,
         fields=fields_dicts,
-        sheet_summaries=sheet_summaries,
+        sheet_summary=sheet_summary,
+        code_template=code_template,
     )
     client: OpenAI = _get_client()
     raw_content: str = _call_with_retry(

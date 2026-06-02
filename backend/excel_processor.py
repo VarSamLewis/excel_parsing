@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 import logging
 from typing import Any
 
@@ -26,12 +25,6 @@ def compute_file_hash(file_bytes: bytes) -> str:
     This is the cache key prefix used throughout the system.
     """
     return hashlib.sha256(file_bytes).hexdigest()[:16]
-
-
-def compute_schema_hash(schema_payload: dict[str, Any] | list[Any]) -> str:
-    """Return a stable hash for a JSON-serialisable schema payload."""
-    canonical = json.dumps(schema_payload, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
 def load_workbook_from_bytes(file_bytes: bytes) -> Workbook:
@@ -265,28 +258,6 @@ def summarise_sheet(
         "data_start_row": header_row_idx + 2,  # 1-indexed
         "columns": column_summaries,
     }
-
-
-def summarise_all_sheets(
-    file_bytes: bytes,
-    max_sample_values: int = 8,
-) -> list[dict[str, Any]]:
-    """Build a smart column summary for every sheet in the workbook."""
-    sheet_names = get_sheet_names(file_bytes)
-    return [
-        summarise_sheet(file_bytes, name, max_sample_values=max_sample_values)
-        for name in sheet_names
-    ]
-
-
-def sample_all_sheets(
-    file_bytes: bytes,
-    max_rows: int = 20,
-    max_cols: int = 26,
-) -> list[dict[str, Any]]:
-    """Sample every sheet in the workbook."""
-    sheet_names = get_sheet_names(file_bytes)
-    return [sample_sheet(file_bytes, name, max_rows, max_cols) for name in sheet_names]
 
 
 def get_cell_value(ws: Worksheet, row: int, col_letter: str) -> Any:

@@ -324,3 +324,20 @@ class TestLogsCli:
             text=True,
         )
         assert proc_usage.returncode == 0
+
+        proc_runs_json = subprocess.run(
+            [
+                "python3",
+                "cli/excel_ingest_cli.py",
+                "logs",
+                "runs",
+                "--limit",
+                "5",
+                "--json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        assert proc_runs_json.returncode == 0
+        assert proc_runs_json.stdout.strip().startswith("[")
