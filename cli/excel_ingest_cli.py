@@ -48,6 +48,20 @@ def _load_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _safe_stem(path: Path) -> str:
+    """Build safe filename stem; args: path (Path); returns: str."""
+    stem: str = path.stem.strip().lower()
+    safe: list[str] = []
+    ch: str
+    for ch in stem:
+        if ch.isalnum() or ch in ("-", "_"):
+            safe.append(ch)
+        else:
+            safe.append("_")
+    collapsed: str = "".join(safe).strip("_")
+    return collapsed or "excel"
+
+
 def _handle_error(exc: Exception) -> None:
     """Map HTTP exceptions to CLI exits; args: exc (Exception); returns: None."""
     if isinstance(exc, httpx.HTTPStatusError):
@@ -392,9 +406,10 @@ def ingest(
         return
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    replay_out = out_dir / "run_ingest.py"
+    excel_name: str = _safe_stem(excel_file)
+    replay_out = out_dir / f"ingest_{excel_name}.py"
 
-    ingest_out = out_dir / "ingest_output.json"
+    ingest_out = out_dir / f"ingest_{excel_name}.json"
     _write_json(ingest_out, ingest_payload)
     replay_code = ingest_payload.get("replay_code")
     script_body = (

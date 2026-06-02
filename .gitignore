@@ -5,7 +5,10 @@ __pycache__/
 .venv/
 venv/
 **/.env
-uploads/
+uploads/*
+!uploads/.gitkeep
+artifacts/*
+!artifacts/.gitkeep
 
 # Test / lint caches
 .pytest_cache/
@@ -14,6 +17,7 @@ uploads/
 
 # Local dev cache
 local_cache.json
+backend/data/ingest_logs.db
 
 # Node
 node_modules/
