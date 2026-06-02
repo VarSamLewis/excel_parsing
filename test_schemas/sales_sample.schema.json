@@ -1,0 +1,29 @@
+{
+  "name": "Sales Sample Schema",
+  "fields": [
+    {
+      "name": "company_name",
+      "field_type": "string",
+      "description": "Customer or company name",
+      "required": true
+    },
+    {
+      "name": "invoice_date",
+      "field_type": "date",
+      "description": "Invoice date",
+      "required": true
+    },
+    {
+      "name": "amount",
+      "field_type": "number",
+      "description": "Invoice amount",
+      "required": true
+    },
+    {
+      "name": "paid",
+      "field_type": "boolean",
+      "description": "Whether invoice is marked paid",
+      "required": true
+    }
+  ]
+}

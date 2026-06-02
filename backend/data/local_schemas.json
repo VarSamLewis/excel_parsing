@@ -1,0 +1,1358 @@
+{
+  "schemas": {
+    "scm_5499c3a52785": {
+      "id": "scm_5499c3a52785",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-01T20:37:36.767167+00:00",
+      "updated_at": "2026-06-01T20:37:36.767177+00:00"
+    },
+    "scm_aa516c17dee8": {
+      "id": "scm_aa516c17dee8",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T20:37:36.771523+00:00",
+      "updated_at": "2026-06-01T20:37:36.773013+00:00"
+    },
+    "scm_9bc567e69778": {
+      "id": "scm_9bc567e69778",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T20:37:36.774985+00:00",
+      "updated_at": "2026-06-01T20:37:36.776195+00:00"
+    },
+    "scm_4fdbd25a1a7b": {
+      "id": "scm_4fdbd25a1a7b",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-01T22:50:27.656748+00:00",
+      "updated_at": "2026-06-01T22:50:27.656755+00:00"
+    },
+    "scm_32bc71b71bd5": {
+      "id": "scm_32bc71b71bd5",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T22:50:27.660759+00:00",
+      "updated_at": "2026-06-01T22:50:27.662691+00:00"
+    },
+    "scm_8a8e117839ee": {
+      "id": "scm_8a8e117839ee",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T22:50:27.664660+00:00",
+      "updated_at": "2026-06-01T22:50:27.665804+00:00"
+    },
+    "scm_8c87571ced1c": {
+      "id": "scm_8c87571ced1c",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-01T22:50:38.333395+00:00",
+      "updated_at": "2026-06-01T22:50:38.333402+00:00"
+    },
+    "scm_a8057ba670a1": {
+      "id": "scm_a8057ba670a1",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T22:50:38.336003+00:00",
+      "updated_at": "2026-06-01T22:50:38.375571+00:00"
+    },
+    "scm_f70a4c5f53ab": {
+      "id": "scm_f70a4c5f53ab",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T22:50:38.378097+00:00",
+      "updated_at": "2026-06-01T22:50:38.379403+00:00"
+    },
+    "scm_bcbf079502fe": {
+      "id": "scm_bcbf079502fe",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-01T22:50:57.081282+00:00",
+      "updated_at": "2026-06-01T22:50:57.081287+00:00"
+    },
+    "scm_8393f03a6003": {
+      "id": "scm_8393f03a6003",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T22:50:57.084418+00:00",
+      "updated_at": "2026-06-01T22:50:57.086441+00:00"
+    },
+    "scm_cf39ed49cbc8": {
+      "id": "scm_cf39ed49cbc8",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T22:50:57.089184+00:00",
+      "updated_at": "2026-06-01T22:50:57.091028+00:00"
+    },
+    "scm_8fc8f1483ea6": {
+      "id": "scm_8fc8f1483ea6",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-01T23:19:45.176465+00:00",
+      "updated_at": "2026-06-01T23:19:45.176472+00:00"
+    },
+    "scm_9ef8ba84574a": {
+      "id": "scm_9ef8ba84574a",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T23:19:45.182494+00:00",
+      "updated_at": "2026-06-01T23:19:45.184081+00:00"
+    },
+    "scm_4f057168a737": {
+      "id": "scm_4f057168a737",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T23:19:45.186517+00:00",
+      "updated_at": "2026-06-01T23:19:45.188084+00:00"
+    },
+    "scm_31080665a604": {
+      "id": "scm_31080665a604",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-01T23:22:30.573191+00:00",
+      "updated_at": "2026-06-01T23:22:30.573197+00:00"
+    },
+    "scm_fe273fd75d25": {
+      "id": "scm_fe273fd75d25",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T23:22:30.576703+00:00",
+      "updated_at": "2026-06-01T23:22:30.608778+00:00"
+    },
+    "scm_9655c6fe6aa9": {
+      "id": "scm_9655c6fe6aa9",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-01T23:22:30.610803+00:00",
+      "updated_at": "2026-06-01T23:22:30.611958+00:00"
+    },
+    "scm_b71e159e315f": {
+      "id": "scm_b71e159e315f",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-02T00:07:39.721699+00:00",
+      "updated_at": "2026-06-02T00:07:39.721708+00:00"
+    },
+    "scm_32c1bc98149b": {
+      "id": "scm_32c1bc98149b",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-02T00:07:39.724811+00:00",
+      "updated_at": "2026-06-02T00:07:39.726896+00:00"
+    },
+    "scm_7db6bfbe1ff3": {
+      "id": "scm_7db6bfbe1ff3",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-02T00:07:39.729504+00:00",
+      "updated_at": "2026-06-02T00:07:39.730986+00:00"
+    },
+    "scm_321db71dd3db": {
+      "id": "scm_321db71dd3db",
+      "name": "Test Schema",
+      "fields": [
+        {
+          "name": "company_name",
+          "field_type": "string",
+          "description": "The company name",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 1,
+      "created_at": "2026-06-02T00:08:01.491449+00:00",
+      "updated_at": "2026-06-02T00:08:01.491456+00:00"
+    },
+    "scm_4bf2a71a1224": {
+      "id": "scm_4bf2a71a1224",
+      "name": "Versioned Schema Updated",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        },
+        {
+          "name": "col2",
+          "field_type": "number",
+          "description": "",
+          "required": false
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-02T00:08:01.494446+00:00",
+      "updated_at": "2026-06-02T00:08:01.496108+00:00"
+    },
+    "scm_283f6814f554": {
+      "id": "scm_283f6814f554",
+      "name": "History Schema v2",
+      "fields": [
+        {
+          "name": "col1",
+          "field_type": "string",
+          "description": "",
+          "required": true
+        }
+      ],
+      "user_id": "local-dev-user",
+      "version": 2,
+      "created_at": "2026-06-02T00:08:01.498126+00:00",
+      "updated_at": "2026-06-02T00:08:01.499596+00:00"
+    }
+  },
+  "schema_history": {
+    "scm_de76ac0b3178": [
+      {
+        "id": "scm_de76ac0b3178",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T19:22:37.114040+00:00",
+        "updated_at": "2026-06-01T19:22:37.114048+00:00"
+      }
+    ],
+    "scm_12b1b6257f67": [
+      {
+        "id": "scm_12b1b6257f67",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T19:22:37.116788+00:00",
+        "updated_at": "2026-06-01T19:22:37.116796+00:00"
+      },
+      {
+        "id": "scm_12b1b6257f67",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T19:22:37.116788+00:00",
+        "updated_at": "2026-06-01T19:22:37.118032+00:00"
+      }
+    ],
+    "scm_df95b8e37025": [
+      {
+        "id": "scm_df95b8e37025",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T19:22:37.120027+00:00",
+        "updated_at": "2026-06-01T19:22:37.120033+00:00"
+      },
+      {
+        "id": "scm_df95b8e37025",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T19:22:37.120027+00:00",
+        "updated_at": "2026-06-01T19:22:37.121152+00:00"
+      }
+    ],
+    "scm_54ff0722fa39": [
+      {
+        "id": "scm_54ff0722fa39",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T19:34:26.266601+00:00",
+        "updated_at": "2026-06-01T19:34:26.266610+00:00"
+      }
+    ],
+    "scm_204913d3ffe2": [
+      {
+        "id": "scm_204913d3ffe2",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T19:34:26.269859+00:00",
+        "updated_at": "2026-06-01T19:34:26.269867+00:00"
+      },
+      {
+        "id": "scm_204913d3ffe2",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T19:34:26.269859+00:00",
+        "updated_at": "2026-06-01T19:34:26.271232+00:00"
+      }
+    ],
+    "scm_da907d06f076": [
+      {
+        "id": "scm_da907d06f076",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T19:34:26.273570+00:00",
+        "updated_at": "2026-06-01T19:34:26.273579+00:00"
+      },
+      {
+        "id": "scm_da907d06f076",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T19:34:26.273570+00:00",
+        "updated_at": "2026-06-01T19:34:26.275388+00:00"
+      }
+    ],
+    "scm_5499c3a52785": [
+      {
+        "id": "scm_5499c3a52785",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T20:37:36.767167+00:00",
+        "updated_at": "2026-06-01T20:37:36.767177+00:00"
+      }
+    ],
+    "scm_aa516c17dee8": [
+      {
+        "id": "scm_aa516c17dee8",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T20:37:36.771523+00:00",
+        "updated_at": "2026-06-01T20:37:36.771531+00:00"
+      },
+      {
+        "id": "scm_aa516c17dee8",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T20:37:36.771523+00:00",
+        "updated_at": "2026-06-01T20:37:36.773013+00:00"
+      }
+    ],
+    "scm_9bc567e69778": [
+      {
+        "id": "scm_9bc567e69778",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T20:37:36.774985+00:00",
+        "updated_at": "2026-06-01T20:37:36.774992+00:00"
+      },
+      {
+        "id": "scm_9bc567e69778",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T20:37:36.774985+00:00",
+        "updated_at": "2026-06-01T20:37:36.776195+00:00"
+      }
+    ],
+    "scm_4fdbd25a1a7b": [
+      {
+        "id": "scm_4fdbd25a1a7b",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:27.656748+00:00",
+        "updated_at": "2026-06-01T22:50:27.656755+00:00"
+      }
+    ],
+    "scm_32bc71b71bd5": [
+      {
+        "id": "scm_32bc71b71bd5",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:27.660759+00:00",
+        "updated_at": "2026-06-01T22:50:27.660765+00:00"
+      },
+      {
+        "id": "scm_32bc71b71bd5",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T22:50:27.660759+00:00",
+        "updated_at": "2026-06-01T22:50:27.662691+00:00"
+      }
+    ],
+    "scm_8a8e117839ee": [
+      {
+        "id": "scm_8a8e117839ee",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:27.664660+00:00",
+        "updated_at": "2026-06-01T22:50:27.664666+00:00"
+      },
+      {
+        "id": "scm_8a8e117839ee",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T22:50:27.664660+00:00",
+        "updated_at": "2026-06-01T22:50:27.665804+00:00"
+      }
+    ],
+    "scm_8c87571ced1c": [
+      {
+        "id": "scm_8c87571ced1c",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:38.333395+00:00",
+        "updated_at": "2026-06-01T22:50:38.333402+00:00"
+      }
+    ],
+    "scm_a8057ba670a1": [
+      {
+        "id": "scm_a8057ba670a1",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:38.336003+00:00",
+        "updated_at": "2026-06-01T22:50:38.336009+00:00"
+      },
+      {
+        "id": "scm_a8057ba670a1",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T22:50:38.336003+00:00",
+        "updated_at": "2026-06-01T22:50:38.375571+00:00"
+      }
+    ],
+    "scm_f70a4c5f53ab": [
+      {
+        "id": "scm_f70a4c5f53ab",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:38.378097+00:00",
+        "updated_at": "2026-06-01T22:50:38.378104+00:00"
+      },
+      {
+        "id": "scm_f70a4c5f53ab",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T22:50:38.378097+00:00",
+        "updated_at": "2026-06-01T22:50:38.379403+00:00"
+      }
+    ],
+    "scm_bcbf079502fe": [
+      {
+        "id": "scm_bcbf079502fe",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:57.081282+00:00",
+        "updated_at": "2026-06-01T22:50:57.081287+00:00"
+      }
+    ],
+    "scm_8393f03a6003": [
+      {
+        "id": "scm_8393f03a6003",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:57.084418+00:00",
+        "updated_at": "2026-06-01T22:50:57.084426+00:00"
+      },
+      {
+        "id": "scm_8393f03a6003",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T22:50:57.084418+00:00",
+        "updated_at": "2026-06-01T22:50:57.086441+00:00"
+      }
+    ],
+    "scm_cf39ed49cbc8": [
+      {
+        "id": "scm_cf39ed49cbc8",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T22:50:57.089184+00:00",
+        "updated_at": "2026-06-01T22:50:57.089195+00:00"
+      },
+      {
+        "id": "scm_cf39ed49cbc8",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T22:50:57.089184+00:00",
+        "updated_at": "2026-06-01T22:50:57.091028+00:00"
+      }
+    ],
+    "scm_8fc8f1483ea6": [
+      {
+        "id": "scm_8fc8f1483ea6",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T23:19:45.176465+00:00",
+        "updated_at": "2026-06-01T23:19:45.176472+00:00"
+      }
+    ],
+    "scm_9ef8ba84574a": [
+      {
+        "id": "scm_9ef8ba84574a",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T23:19:45.182494+00:00",
+        "updated_at": "2026-06-01T23:19:45.182500+00:00"
+      },
+      {
+        "id": "scm_9ef8ba84574a",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T23:19:45.182494+00:00",
+        "updated_at": "2026-06-01T23:19:45.184081+00:00"
+      }
+    ],
+    "scm_4f057168a737": [
+      {
+        "id": "scm_4f057168a737",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T23:19:45.186517+00:00",
+        "updated_at": "2026-06-01T23:19:45.186524+00:00"
+      },
+      {
+        "id": "scm_4f057168a737",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T23:19:45.186517+00:00",
+        "updated_at": "2026-06-01T23:19:45.188084+00:00"
+      }
+    ],
+    "scm_31080665a604": [
+      {
+        "id": "scm_31080665a604",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T23:22:30.573191+00:00",
+        "updated_at": "2026-06-01T23:22:30.573197+00:00"
+      }
+    ],
+    "scm_fe273fd75d25": [
+      {
+        "id": "scm_fe273fd75d25",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T23:22:30.576703+00:00",
+        "updated_at": "2026-06-01T23:22:30.576710+00:00"
+      },
+      {
+        "id": "scm_fe273fd75d25",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T23:22:30.576703+00:00",
+        "updated_at": "2026-06-01T23:22:30.608778+00:00"
+      }
+    ],
+    "scm_9655c6fe6aa9": [
+      {
+        "id": "scm_9655c6fe6aa9",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-01T23:22:30.610803+00:00",
+        "updated_at": "2026-06-01T23:22:30.610808+00:00"
+      },
+      {
+        "id": "scm_9655c6fe6aa9",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-01T23:22:30.610803+00:00",
+        "updated_at": "2026-06-01T23:22:30.611958+00:00"
+      }
+    ],
+    "scm_b71e159e315f": [
+      {
+        "id": "scm_b71e159e315f",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-02T00:07:39.721699+00:00",
+        "updated_at": "2026-06-02T00:07:39.721708+00:00"
+      }
+    ],
+    "scm_32c1bc98149b": [
+      {
+        "id": "scm_32c1bc98149b",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-02T00:07:39.724811+00:00",
+        "updated_at": "2026-06-02T00:07:39.724817+00:00"
+      },
+      {
+        "id": "scm_32c1bc98149b",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-02T00:07:39.724811+00:00",
+        "updated_at": "2026-06-02T00:07:39.726896+00:00"
+      }
+    ],
+    "scm_7db6bfbe1ff3": [
+      {
+        "id": "scm_7db6bfbe1ff3",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-02T00:07:39.729504+00:00",
+        "updated_at": "2026-06-02T00:07:39.729511+00:00"
+      },
+      {
+        "id": "scm_7db6bfbe1ff3",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-02T00:07:39.729504+00:00",
+        "updated_at": "2026-06-02T00:07:39.730986+00:00"
+      }
+    ],
+    "scm_321db71dd3db": [
+      {
+        "id": "scm_321db71dd3db",
+        "name": "Test Schema",
+        "fields": [
+          {
+            "name": "company_name",
+            "field_type": "string",
+            "description": "The company name",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-02T00:08:01.491449+00:00",
+        "updated_at": "2026-06-02T00:08:01.491456+00:00"
+      }
+    ],
+    "scm_4bf2a71a1224": [
+      {
+        "id": "scm_4bf2a71a1224",
+        "name": "Versioned Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-02T00:08:01.494446+00:00",
+        "updated_at": "2026-06-02T00:08:01.494454+00:00"
+      },
+      {
+        "id": "scm_4bf2a71a1224",
+        "name": "Versioned Schema Updated",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          },
+          {
+            "name": "col2",
+            "field_type": "number",
+            "description": "",
+            "required": false
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-02T00:08:01.494446+00:00",
+        "updated_at": "2026-06-02T00:08:01.496108+00:00"
+      }
+    ],
+    "scm_283f6814f554": [
+      {
+        "id": "scm_283f6814f554",
+        "name": "History Schema",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 1,
+        "created_at": "2026-06-02T00:08:01.498126+00:00",
+        "updated_at": "2026-06-02T00:08:01.498132+00:00"
+      },
+      {
+        "id": "scm_283f6814f554",
+        "name": "History Schema v2",
+        "fields": [
+          {
+            "name": "col1",
+            "field_type": "string",
+            "description": "",
+            "required": true
+          }
+        ],
+        "user_id": "local-dev-user",
+        "version": 2,
+        "created_at": "2026-06-02T00:08:01.498126+00:00",
+        "updated_at": "2026-06-02T00:08:01.499596+00:00"
+      }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "People Sample Schema",
+  "fields": [
+    {
+      "name": "name",
+      "field_type": "string",
+      "description": "Employee full name",
+      "required": true
+    },
+    {
+      "name": "department",
+      "field_type": "string",
+      "description": "Employee department",
+      "required": true
+    },
+    {
+      "name": "start_date",
+      "field_type": "date",
+      "description": "Employment start date",
+      "required": true
+    },
+    {
+      "name": "salary",
+      "field_type": "number",
+      "description": "Annual salary",
+      "required": true
+    }
+  ]
+}

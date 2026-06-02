@@ -1,0 +1,605 @@
+"""FastAPI application — routes only, no business logic."""
+
+from __future__ import annotations
+
+import json
+import uuid
+import logging
+from datetime import datetime, timezone
+
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.config import settings
+from backend.models import (
+    ExcelSchemaResponse,
+    ExcelMapping,
+    IngestResponse,
+    SchemaDefinition,
+    SheetResult,
+)
+from backend.excel_processor import (
+    compute_file_hash,
+    compute_schema_hash,
+    get_sheet_names,
+    summarise_sheet,
+)
+from backend.llm.mapper import generate_ingest_code, infer_mapping
+from backend.llm.validator import validate_extraction, verify_generated_output
+from backend.extractor.engine import extract
+from backend.schema_store import LocalSchemaStore, get_schema_store
+from backend.file_store import LocalFileStore, get_file_store
+from backend.observability import configure_logging, OperationTimer, log_event
+from backend.verification import run_precheck, render_precheck_markdown
+
+# Configure structured logging.
+configure_logging()
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title="Excel Ingestion API",
+    version="1.0.0",
+    description="Flexible Excel ingestion powered by GPT-4o mapping and deterministic extraction.",
+)
+
+# ── CORS ────────────────────────────────────────────────────────────
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Shared state ────────────────────────────────────────────────────
+
+_store: LocalSchemaStore | None = None
+_file_store: LocalFileStore | None = None
+
+
+def _build_replay_code(
+    *,
+    backend_base_url: str,
+    schema_name: str,
+    schema_json: dict[str, object],
+    selected_sheets: str,
+) -> str:
+    """Build replay script text; args: backend_base_url (str), schema_name (str), schema_json (dict[str, object]), selected_sheets (str); returns: str."""
+    script: str = f"""#!/usr/bin/env python3
+import json
+from pathlib import Path
+
+import httpx
+
+BACKEND_URL = {backend_base_url!r}
+SCHEMA_NAME = {schema_name!r}
+SCHEMA_JSON = {json.dumps(schema_json, indent=2)}
+SELECTED_SHEETS = {selected_sheets!r}
+EXCEL_PATH = Path("input.xlsx")
+OUT_PATH = Path("ingest_output.json")
+
+
+def main() -> int:
+    params = {{
+        "schema_name": SCHEMA_NAME,
+        "schema_json": json.dumps(SCHEMA_JSON),
+    }}
+    if SELECTED_SHEETS:
+        params["selected_sheets"] = SELECTED_SHEETS
+
+    files = {{
+        "file": (
+            EXCEL_PATH.name,
+            EXCEL_PATH.read_bytes(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    }}
+
+    with httpx.Client(timeout=600.0) as client:
+        resp = client.post(f"{{BACKEND_URL}}/ingest", params=params, files=files)
+        resp.raise_for_status()
+        payload = resp.json()
+
+    OUT_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"Wrote {{OUT_PATH}}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+    return script
+
+
+def _get_store() -> LocalSchemaStore:
+    """Get schema-store singleton; args: none; returns: LocalSchemaStore."""
+    global _store
+    if _store is None:
+        _store = get_schema_store()
+    return _store
+
+
+def _get_file_store() -> LocalFileStore:
+    """Get file-store singleton; args: none; returns: LocalFileStore."""
+    global _file_store
+    if _file_store is None:
+        _file_store = get_file_store()
+    return _file_store
+
+
+# ── Auth dependency ─────────────────────────────────────────────────
+
+
+async def get_user(request: Request) -> dict[str, str]:
+    """Return local stub user; args: request (Request); returns: dict[str, str]."""
+    _ = request
+    return {"oid": "local-dev-user", "name": "Local Developer"}
+
+
+# ── Health ──────────────────────────────────────────────────────────
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    """Return service health status; args: none; returns: dict[str, str]."""
+    return {"status": "ok"}
+
+
+@app.post("/excel-schema", response_model=ExcelSchemaResponse)
+async def excel_schema(
+    file: UploadFile = File(...),
+    selected_sheets: str = Query(
+        default="", description="Comma-separated sheet names to process (empty = all)"
+    ),
+    user: dict[str, str] = Depends(get_user),
+) -> ExcelSchemaResponse:
+    """Build workbook schema summary; args: file (UploadFile), selected_sheets (str), user (dict[str, str]); returns: ExcelSchemaResponse."""
+    _ = user  # Keep auth dependency behaviour consistent with other routes.
+    file_bytes = await file.read()
+    file_hash = compute_file_hash(file_bytes)
+
+    all_sheet_names = get_sheet_names(file_bytes)
+    if selected_sheets:
+        sheets_to_process = [s.strip() for s in selected_sheets.split(",") if s.strip()]
+        invalid = [s for s in sheets_to_process if s not in all_sheet_names]
+        if invalid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Sheets not found: {invalid}. Available: {all_sheet_names}",
+            )
+    else:
+        sheets_to_process = all_sheet_names
+
+    summaries = [summarise_sheet(file_bytes, sheet_name=s) for s in sheets_to_process]
+    schema_payload = {
+        "sheet_names": all_sheet_names,
+        "processed_sheet_names": sheets_to_process,
+        "sheets": summaries,
+    }
+    schema_hash = compute_schema_hash(schema_payload)
+
+    return ExcelSchemaResponse(
+        excel_hash=file_hash,
+        excel_schema_hash=schema_hash,
+        sheet_names=all_sheet_names,
+        processed_sheet_names=sheets_to_process,
+        sheets=summaries,
+    )
+
+
+# ── Ingestion ───────────────────────────────────────────────────────
+
+
+@app.post("/ingest", response_model=IngestResponse)
+async def ingest(
+    request: Request,
+    file: UploadFile = File(...),
+    schema_name: str = Query(..., description="Schema name"),
+    schema_json: str = Query(..., description="JSON-encoded schema definition"),
+    selected_sheets: str = Query(
+        default="", description="Comma-separated sheet names to process (empty = all)"
+    ),
+    user: dict[str, str] = Depends(get_user),
+) -> IngestResponse:
+    """Map + extract + validate an Excel file against a schema.
+
+    Processes each sheet independently with its own mapping call.
+
+    Flow:
+    1. Hash the file and store the upload
+    2. Discover sheets (filter by selected_sheets if provided)
+    3. For each sheet: infer mapping, extract, validate
+    4. Aggregate results and return
+    """
+    fstore: LocalFileStore = _get_file_store()
+    file_bytes: bytes = await file.read()
+    file_hash: str = compute_file_hash(file_bytes)
+    run_id: str = f"run_{uuid.uuid4().hex[:12]}"
+    user_id: str = user.get("oid", "local-dev-user")
+
+    log_event(
+        "ingest_started", logger, file_hash=file_hash, user_id=user_id, run_id=run_id
+    )
+
+    # Parse schema from query param
+    try:
+        schema_data = json.loads(schema_json)
+        schema = SchemaDefinition.model_validate(schema_data)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Invalid schema: {e}")
+
+    schema_id = schema.id or "ephemeral"
+    schema_version = getattr(schema, "version", 1)
+    replay_code: str = ""
+
+    # 1. Store the uploaded file
+    try:
+        storage_path = fstore.store_file(user_id, file_hash, file_bytes)
+        log_event("file_stored", logger, file_hash=file_hash, user_id=user_id)
+    except Exception as e:
+        logger.warning("File storage failed (non-fatal): %s", e)
+        storage_path = ""
+
+    # 2. Check OpenAI is configured
+    if not settings.openai_available:
+        raise HTTPException(
+            status_code=503,
+            detail="OpenAI is not configured. Set OPENAI_API_KEY.",
+        )
+
+    # 3. Discover sheets
+    all_sheet_names = get_sheet_names(file_bytes)
+    if selected_sheets:
+        sheets_to_process = [s.strip() for s in selected_sheets.split(",") if s.strip()]
+        # Validate sheet names
+        invalid = [s for s in sheets_to_process if s not in all_sheet_names]
+        if invalid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Sheets not found: {invalid}. Available: {all_sheet_names}",
+            )
+    else:
+        sheets_to_process = all_sheet_names
+
+    with OperationTimer("llm_codegen", logger, schema_id=schema_id, run_id=run_id):
+        try:
+            replay_code = generate_ingest_code(
+                file_bytes, schema, sheets_to_process, run_id=run_id
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Code generation failed: {exc}",
+            )
+
+    log_event(
+        "sheets_discovered",
+        logger,
+        file_hash=file_hash,
+        sheet_count=len(sheets_to_process),
+    )
+
+    # 4. Process each sheet independently
+    sheet_results: list[SheetResult] = []
+    all_data: list[dict] = []
+    all_lineage = []
+    first_mapping = None
+
+    for sheet_name in sheets_to_process:
+        log_event(
+            "sheet_processing_started",
+            logger,
+            sheet_name=sheet_name,
+            file_hash=file_hash,
+        )
+
+        # 5a. Infer mapping for this sheet
+        with OperationTimer(
+            "llm_mapping",
+            logger,
+            sheet_name=sheet_name,
+            schema_id=schema_id,
+            run_id=run_id,
+        ):
+            try:
+                mapping = infer_mapping(file_bytes, schema, sheet_name=sheet_name)
+            except Exception as e:
+                logger.error("Mapping failed for sheet '%s': %s", sheet_name, e)
+                sheet_results.append(
+                    SheetResult(
+                        sheet_name=sheet_name,
+                        mapping=None,
+                        data=[],
+                        row_count=0,
+                    )
+                )
+                continue
+
+        if first_mapping is None:
+            first_mapping = mapping
+
+        # 5b. Extract data from this sheet
+        with OperationTimer("extraction", logger, sheet_name=sheet_name, run_id=run_id):
+            try:
+                data_rows, lineage = extract(file_bytes, file_hash, mapping)
+            except Exception as e:
+                logger.error("Extraction failed for sheet '%s': %s", sheet_name, e)
+                sheet_results.append(
+                    SheetResult(
+                        sheet_name=sheet_name,
+                        mapping=mapping,
+                        data=[],
+                        row_count=0,
+                    )
+                )
+                continue
+
+        # 5c. Validate this sheet's extraction
+        with OperationTimer(
+            "llm_validation", logger, sheet_name=sheet_name, run_id=run_id
+        ):
+            try:
+                validation = validate_extraction(schema, data_rows, run_id=run_id)
+            except Exception as e:
+                logger.warning(
+                    "Validation failed for sheet '%s' (non-fatal): %s", sheet_name, e
+                )
+                validation = None
+
+        log_event(
+            "sheet_processing_completed",
+            logger,
+            sheet_name=sheet_name,
+            row_count=len(data_rows),
+            confidence=validation.confidence if validation else None,
+        )
+
+        sheet_results.append(
+            SheetResult(
+                sheet_name=sheet_name,
+                mapping=mapping,
+                validation=validation,
+                data=data_rows,
+                lineage=lineage,
+                row_count=len(data_rows),
+            )
+        )
+        all_data.extend(data_rows)
+        all_lineage.extend(lineage)
+
+    # 5. Build aggregate response
+    # For backwards compatibility, the top-level fields reflect the first sheet
+    first_validation = next(
+        (sr.validation for sr in sheet_results if sr.validation), None
+    )
+
+    response = IngestResponse(
+        success=True,
+        excel_hash=file_hash,
+        schema_id=schema_id,
+        schema_version=schema_version,
+        sheet_names=all_sheet_names,
+        sheets=sheet_results,
+        mapping=first_mapping,
+        validation=first_validation,
+        data=all_data,
+        lineage=all_lineage,
+        row_count=len(all_data),
+        file_storage_path=storage_path,
+        replay_code=replay_code,
+        run_id=run_id,
+        created_at=datetime.now(timezone.utc),
+    )
+
+    log_event(
+        "ingest_completed",
+        logger,
+        file_hash=file_hash,
+        schema_id=schema_id,
+        schema_version=schema_version,
+        row_count=len(all_data),
+        sheet_count=len(sheet_results),
+        run_id=run_id,
+    )
+
+    return response
+
+
+@app.post("/verify-ingestion")
+async def verify_ingestion(
+    schema_json: str = Query(..., description="JSON-encoded schema definition"),
+    generated_code: str = Query(..., description="Generated python ingestion code"),
+    output_json: str = Query(..., description="JSON output produced by generated code"),
+    run_id: str = Query(default="", description="Optional run identifier"),
+    user: dict[str, str] = Depends(get_user),
+) -> dict[str, object]:
+    """Verify generated ingestion output; args: schema_json (str), generated_code (str), output_json (str), run_id (str), user (dict[str, str]); returns: dict[str, str]."""
+    _ = user
+    log_event("verify_started", logger, run_id=run_id)
+    try:
+        schema_data: dict[str, object] = json.loads(schema_json)
+        rows_raw: object = json.loads(output_json)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Invalid verification payload JSON: {exc}"
+        )
+    rows: list[dict[str, object]] = rows_raw if isinstance(rows_raw, list) else []
+    precheck: dict[str, object] = run_precheck(schema_data, rows)
+    log_event(
+        "verify_precheck_completed",
+        logger,
+        run_id=run_id,
+        clean=precheck.get("clean", False),
+    )
+
+    llm_used: bool = False
+    llm_section: str = ""
+    if not bool(precheck.get("clean", False)):
+        llm_used = True
+        log_event("verify_llm_called", logger, run_id=run_id)
+        llm_section = verify_generated_output(
+            schema_json=schema_json,
+            generated_code=generated_code,
+            output_json=output_json,
+            run_id=run_id,
+        )
+    report_markdown: str = render_precheck_markdown(precheck, llm_section=llm_section)
+    log_event("verify_completed", logger, run_id=run_id, llm_used=llm_used)
+    return {
+        "report_markdown": report_markdown,
+        "precheck": precheck,
+        "llm_used": llm_used,
+    }
+
+
+# ── Extraction-only (manual override) ──────────────────────────────
+
+
+@app.post("/extract", response_model=IngestResponse)
+async def extract_with_file(
+    file: UploadFile | None = File(default=None),
+    excel_hash: str = Query(
+        default="",
+        description="File hash to retrieve from storage (if no file uploaded)",
+    ),
+    mapping_json: str = Query(..., description="JSON-encoded ExcelMapping"),
+    schema_id: str = Query(default="ephemeral", description="Schema ID"),
+    user: dict[str, str] = Depends(get_user),
+) -> IngestResponse:
+    """Re-run extraction with a user-provided mapping — no LLM call.
+
+    The user corrects the inferred mapping in the UI and either re-uploads the file
+    or provides the excel_hash to retrieve it from storage, skipping the LLM step.
+    """
+    fstore: LocalFileStore = _get_file_store()
+    user_id: str = user.get("oid", "local-dev-user")
+
+    # Get file bytes: from upload or from storage
+    if file is not None:
+        file_bytes = await file.read()
+        file_hash = compute_file_hash(file_bytes)
+    elif excel_hash:
+        file_bytes = fstore.retrieve_file(user_id, excel_hash)
+        if file_bytes is None:
+            raise HTTPException(
+                status_code=404,
+                detail="File not found in storage. Please re-upload.",
+            )
+        file_hash = excel_hash
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Either upload a file or provide excel_hash to retrieve from storage.",
+        )
+
+    try:
+        mapping_data = json.loads(mapping_json)
+        mapping = ExcelMapping.model_validate(mapping_data)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Invalid mapping: {e}")
+
+    # Extract data
+    try:
+        data_rows, lineage = extract(file_bytes, file_hash, mapping)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {e}")
+
+    response = IngestResponse(
+        success=True,
+        excel_hash=file_hash,
+        schema_id=schema_id,
+        mapping=mapping,
+        validation=None,
+        data=data_rows,
+        lineage=lineage,
+        row_count=len(data_rows),
+        created_at=datetime.now(timezone.utc),
+    )
+
+    return response
+
+
+# ── Schema Library ──────────────────────────────────────────────────
+
+
+@app.get("/schemas")
+async def list_schemas(
+    user: dict[str, str] = Depends(get_user),
+) -> dict[str, list[dict[str, object]]]:
+    """List schemas for user; args: user (dict[str, str]); returns: dict[str, list[dict[str, object]]]."""
+    store: LocalSchemaStore = _get_store()
+    user_id: str = user.get("oid", "")
+    schemas: list[dict[str, object]] = store.list_schemas(user_id)
+    return {"schemas": schemas}
+
+
+@app.post("/schemas")
+async def create_schema(
+    schema: SchemaDefinition,
+    user: dict[str, str] = Depends(get_user),
+) -> dict[str, object]:
+    """Create schema record; args: schema (SchemaDefinition), user (dict[str, str]); returns: dict[str, object]."""
+    store: LocalSchemaStore = _get_store()
+    schema_dict: dict[str, object] = schema.model_dump(mode="json")
+    schema_dict["user_id"] = user.get("oid", "")
+    saved: dict[str, object] = store.save_schema(schema_dict)
+    return saved
+
+
+@app.put("/schemas/{schema_id}")
+async def update_schema(
+    schema_id: str,
+    schema: SchemaDefinition,
+    user: dict[str, str] = Depends(get_user),
+) -> dict[str, object]:
+    """Update schema record; args: schema_id (str), schema (SchemaDefinition), user (dict[str, str]); returns: dict[str, object]."""
+    store: LocalSchemaStore = _get_store()
+    # Verify ownership
+    existing = store.get_schema(schema_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    if existing.get("user_id") != user.get("oid", ""):
+        raise HTTPException(status_code=403, detail="Not your schema")
+
+    schema_dict: dict[str, object] = schema.model_dump(mode="json")
+    updated: dict[str, object] | None = store.update_schema(schema_id, schema_dict)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    return updated
+
+
+@app.get("/schemas/{schema_id}/history")
+async def get_schema_history(
+    schema_id: str,
+    user: dict[str, str] = Depends(get_user),
+) -> dict[str, object]:
+    """Get schema history; args: schema_id (str), user (dict[str, str]); returns: dict[str, object]."""
+    store: LocalSchemaStore = _get_store()
+    existing = store.get_schema(schema_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    if existing.get("user_id") != user.get("oid", ""):
+        raise HTTPException(status_code=403, detail="Not your schema")
+
+    history: list[dict[str, object]] = store.get_schema_history(schema_id)
+    return {"schema_id": schema_id, "versions": history}
+
+
+@app.delete("/schemas/{schema_id}")
+async def delete_schema(
+    schema_id: str,
+    user: dict[str, str] = Depends(get_user),
+) -> dict[str, bool]:
+    """Delete schema record; args: schema_id (str), user (dict[str, str]); returns: dict[str, bool]."""
+    store: LocalSchemaStore = _get_store()
+    existing = store.get_schema(schema_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    if existing.get("user_id") != user.get("oid", ""):
+        raise HTTPException(status_code=403, detail="Not your schema")
+
+    deleted: bool = store.delete_schema(schema_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    return {"deleted": True}
