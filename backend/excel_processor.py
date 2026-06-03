@@ -46,6 +46,7 @@ def get_sheet_names(file_bytes: bytes) -> list[str]:
 
 def sample_sheet(
     file_bytes: bytes,
+    *,
     sheet_name: str | None = None,
     max_rows: int = 20,
     max_cols: int = 26,
@@ -110,6 +111,7 @@ def sample_sheet(
 
 def summarise_sheet(
     file_bytes: bytes,
+    *,
     sheet_name: str | None = None,
     max_sample_values: int = 8,
     max_distinct_categorical: int = 15,

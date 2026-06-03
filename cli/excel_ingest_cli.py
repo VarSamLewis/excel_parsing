@@ -433,7 +433,6 @@ def ingest(
             ingest_payload = resp.json()
     except Exception as exc:
         _handle_error(exc)
-        return
 
     out_dir.mkdir(parents=True, exist_ok=True)
     excel_name: str = _safe_stem(excel_file)
@@ -488,7 +487,6 @@ def ingest(
                 verify_payload: dict[str, Any] = verify_resp.json()
         except Exception as exc:
             _handle_error(exc)
-            return
 
         report_text: object = verify_payload.get("report_markdown", "")
         verify_report.write_text(str(report_text), encoding="utf-8")

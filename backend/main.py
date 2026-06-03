@@ -176,7 +176,7 @@ async def ingest(
         schema_data = json.loads(schema_json)
         schema = SchemaDefinition.model_validate(schema_data)
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Invalid schema: {e}")
+        raise HTTPException(status_code=422, detail=f"Invalid schema: {e}") from e
 
     schema_id = schema.id or "ephemeral"
     schema_version = getattr(schema, "version", 1)
@@ -216,7 +216,7 @@ async def ingest(
             raise HTTPException(
                 status_code=500,
                 detail=f"Code generation failed: {exc}",
-            )
+            ) from exc
 
     log_event(
         "sheet_selected",
@@ -240,7 +240,7 @@ async def ingest(
             raise HTTPException(
                 status_code=500,
                 detail=f"Mapping failed: {e}",
-            )
+            ) from e
 
     # 5. Extract data from the sheet
     with OperationTimer("extraction", logger, sheet_name=sheet_name, run_id=run_id):
@@ -251,7 +251,7 @@ async def ingest(
             raise HTTPException(
                 status_code=500,
                 detail=f"Extraction failed: {e}",
-            )
+            ) from e
 
     # 6. Validate extraction
     with OperationTimer("llm_validation", logger, sheet_name=sheet_name, run_id=run_id):
@@ -328,7 +328,7 @@ async def verify_ingestion(
     except Exception as exc:
         raise HTTPException(
             status_code=422, detail=f"Invalid verification payload JSON: {exc}"
-        )
+        ) from exc
     rows: list[dict[str, object]] = rows_raw if isinstance(rows_raw, list) else []
     precheck: dict[str, object] = run_precheck(schema_data, rows)
     log_event(
@@ -402,13 +402,13 @@ async def extract_with_file(
         mapping_data = json.loads(mapping_json)
         mapping = ExcelMapping.model_validate(mapping_data)
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Invalid mapping: {e}")
+        raise HTTPException(status_code=422, detail=f"Invalid mapping: {e}") from e
 
     # Extract data
     try:
         data_rows, lineage = extract(file_bytes, file_hash, mapping)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Extraction failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {e}") from e
 
     response = IngestResponse(
         success=True,

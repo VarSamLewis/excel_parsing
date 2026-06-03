@@ -15,6 +15,7 @@ from openai import OpenAI
 
 from backend.config import settings
 from backend.models import ExcelMapping, SchemaDefinition
+from backend.llm.client import get_client
 from backend.llm.prompts import build_mapper_prompt, build_codegen_prompt
 from backend.excel_processor import summarise_sheet
 from backend.log_store import write_llm_usage
@@ -25,27 +26,8 @@ MAX_RETRIES = 2
 RETRY_BASE_DELAY = 1.0  # seconds
 
 
-def _get_client() -> OpenAI:
-    """Create OpenAI client; args: none; returns: OpenAI."""
-    if settings.openai_base_url:
-        return OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
-        )
-    return OpenAI(api_key=settings.openai_api_key)
-
-
 def _call_with_retry(client: OpenAI, step: str, run_id: str = "", **kwargs: Any) -> str:
-    """Call the OpenAI API with retry logic for transient errors.
-
-    Retries on:
-    - 429 (rate limit)
-    - 5xx (server errors)
-    - Connection errors
-
-    Returns the raw content string from the response.
-    """
-    last_exception: Exception | None = None
+    """Call the OpenAI API with retry logic for transient errors; args: client (OpenAI), step (str), run_id (str), **kwargs (Any); returns: str."""
     start: float = time.perf_counter()
 
     for attempt in range(1 + MAX_RETRIES):
@@ -68,7 +50,6 @@ def _call_with_retry(client: OpenAI, step: str, run_id: str = "", **kwargs: Any)
             )
             return response.choices[0].message.content
         except Exception as e:
-            last_exception = e
             error_str = str(e)
             status_code = getattr(e, "status_code", None)
 
@@ -100,12 +81,11 @@ def _call_with_retry(client: OpenAI, step: str, run_id: str = "", **kwargs: Any)
             )
             time.sleep(delay)
 
-    raise RuntimeError("LLM call failed after retries") from last_exception
-
 
 def infer_mapping(
     file_bytes: bytes,
     schema: SchemaDefinition,
+    *,
     sheet_name: str | None = None,
 ) -> ExcelMapping:
     """Call GPT-4o to infer how the Excel file maps to the given schema.
@@ -144,7 +124,7 @@ def infer_mapping(
     )
 
     # 3. Call GPT-4o with retry
-    client = _get_client()
+    client = get_client()
     logger.info(
         "Calling GPT-4o mapper for schema '%s', sheet '%s'",
         schema.name,
@@ -189,6 +169,7 @@ def generate_ingest_code(
     file_bytes: bytes,
     schema: SchemaDefinition,
     sheet_name: str,
+    *,
     run_id: str = "",
     code_template: str | None = None,
 ) -> str:
@@ -213,7 +194,7 @@ def generate_ingest_code(
         sheet_summary=sheet_summary,
         code_template=code_template,
     )
-    client: OpenAI = _get_client()
+    client: OpenAI = get_client()
     raw_content: str = _call_with_retry(
         client,
         step="codegen",
