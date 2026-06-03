@@ -15,9 +15,7 @@ import httpx
 import typer
 
 app = typer.Typer(help="Excel ingestion CLI")
-schemas_app = typer.Typer(help="Schema library operations")
 logs_app = typer.Typer(help="Local SQLite log queries")
-app.add_typer(schemas_app, name="schemas")
 app.add_typer(logs_app, name="logs")
 
 LOG_DB_PATH = Path("backend/data/ingest_logs.db")
@@ -104,7 +102,7 @@ import httpx
 BACKEND_URL = {backend_url!r}
 SCHEMA_PATH = Path({str(schema_path)!r})
 EXCEL_PATH = Path({str(excel_path)!r})
-OUT_PATH = Path("ingest_output.json")
+OUT_PATH = Path(f"output_{_safe_stem(excel_path)}.json")
 
 
 def main() -> int:
@@ -145,125 +143,6 @@ def health(
             resp = client.get(f"{base}/health")
             resp.raise_for_status()
             typer.echo(json.dumps(resp.json(), indent=2))
-    except Exception as exc:
-        _handle_error(exc)
-
-
-@schemas_app.command("list")
-def schemas_list(
-    backend_url: str | None = typer.Option(None, help="Backend base URL"),
-) -> None:
-    """List saved schemas."""
-    base = _backend_url(backend_url)
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.get(f"{base}/schemas")
-            resp.raise_for_status()
-            typer.echo(json.dumps(resp.json(), indent=2))
-    except Exception as exc:
-        _handle_error(exc)
-
-
-@schemas_app.command("create")
-def schemas_create(
-    schema_file: Path = typer.Option(..., exists=True, dir_okay=False),
-    backend_url: str | None = typer.Option(None, help="Backend base URL"),
-) -> None:
-    """Create schema from JSON file."""
-    payload = _load_json(schema_file)
-    base = _backend_url(backend_url)
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.post(f"{base}/schemas", json=payload)
-            resp.raise_for_status()
-            typer.echo(json.dumps(resp.json(), indent=2))
-    except Exception as exc:
-        _handle_error(exc)
-
-
-@schemas_app.command("update")
-def schemas_update(
-    schema_id: str = typer.Option(..., help="Schema ID"),
-    schema_file: Path = typer.Option(..., exists=True, dir_okay=False),
-    backend_url: str | None = typer.Option(None, help="Backend base URL"),
-) -> None:
-    """Update existing schema by ID."""
-    payload = _load_json(schema_file)
-    base = _backend_url(backend_url)
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.put(f"{base}/schemas/{schema_id}", json=payload)
-            resp.raise_for_status()
-            typer.echo(json.dumps(resp.json(), indent=2))
-    except Exception as exc:
-        _handle_error(exc)
-
-
-@schemas_app.command("delete")
-def schemas_delete(
-    schema_id: str = typer.Option(..., help="Schema ID"),
-    backend_url: str | None = typer.Option(None, help="Backend base URL"),
-) -> None:
-    """Delete schema by ID."""
-    base = _backend_url(backend_url)
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.delete(f"{base}/schemas/{schema_id}")
-            resp.raise_for_status()
-            typer.echo(json.dumps(resp.json(), indent=2))
-    except Exception as exc:
-        _handle_error(exc)
-
-
-@schemas_app.command("clear")
-def schemas_clear(
-    yes: bool = typer.Option(
-        False,
-        "--yes",
-        help="Delete all schemas without confirmation prompt",
-    ),
-    backend_url: str | None = typer.Option(None, help="Backend base URL"),
-) -> None:
-    """Delete all schemas for the current local user."""
-    base: str = _backend_url(backend_url)
-    if not yes:
-        confirmed: bool = typer.confirm(
-            "Delete all schemas for the current user?",
-            default=False,
-        )
-        if not confirmed:
-            typer.echo("Aborted.")
-            return
-
-    try:
-        with httpx.Client(timeout=60.0) as client:
-            list_resp: httpx.Response = client.get(f"{base}/schemas")
-            list_resp.raise_for_status()
-            payload: dict[str, Any] = list_resp.json()
-            schemas_raw: object = payload.get("schemas", [])
-            schemas: list[dict[str, Any]] = (
-                schemas_raw if isinstance(schemas_raw, list) else []
-            )
-
-            schema_ids: list[str] = []
-            entry: dict[str, Any]
-            for entry in schemas:
-                schema_id: object = entry.get("id")
-                if isinstance(schema_id, str) and schema_id:
-                    schema_ids.append(schema_id)
-
-            if not schema_ids:
-                typer.echo("No schemas to delete.")
-                return
-
-            deleted_count: int = 0
-            sid: str
-            for sid in schema_ids:
-                delete_resp: httpx.Response = client.delete(f"{base}/schemas/{sid}")
-                delete_resp.raise_for_status()
-                deleted_count += 1
-
-        typer.echo(f"Deleted {deleted_count} schemas.")
     except Exception as exc:
         _handle_error(exc)
 
@@ -450,14 +329,18 @@ def ingest(
             excel_path=excel_file.resolve(),
         )
     )
+    script_body = script_body.replace(
+        'EXCEL_PATH = Path("input.xlsx")',
+        f"EXCEL_PATH = Path({str(excel_file.resolve())!r})",
+    ).replace(
+        'OUT_PATH = Path("ingest_output.json")',
+        f'OUT_PATH = Path(f"output_{excel_name}.json")',
+    )
     replay_out.write_text(script_body, encoding="utf-8")
 
     if verify:
-        verify_input: Path = out_dir / "input.xlsx"
-        verify_output: Path = out_dir / "ingest_output.json"
-        stemmed_output: Path = out_dir / f"ingest_output_{excel_name}.json"
+        verify_output: Path = out_dir / f"output_{excel_name}.json"
         verify_report: Path = out_dir / f"verification_report_{excel_name}.md"
-        verify_input.write_bytes(excel_file.read_bytes())
         try:
             subprocess.run(
                 ["python3", str(replay_out.name)],
@@ -469,9 +352,7 @@ def ingest(
         except subprocess.CalledProcessError as exc:
             raise typer.BadParameter(f"Verification run failed: {exc.stderr}") from exc
 
-        if verify_output.exists():
-            verify_output.rename(stemmed_output)
-        output_payload: str = stemmed_output.read_text(encoding="utf-8")
+        output_payload: str = verify_output.read_text(encoding="utf-8")
         try:
             with httpx.Client(timeout=180.0) as client:
                 verify_resp = client.post(

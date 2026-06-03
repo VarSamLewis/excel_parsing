@@ -24,7 +24,6 @@ from backend.excel_processor import (
 from backend.llm.mapper import generate_ingest_code, infer_mapping
 from backend.llm.validator import validate_extraction, verify_generated_output
 from backend.extractor.engine import extract
-from backend.schema_store import LocalSchemaStore, get_schema_store
 from backend.file_store import LocalFileStore, get_file_store
 from backend.observability import configure_logging, OperationTimer, log_event
 from backend.verification import run_precheck, render_precheck_markdown
@@ -51,64 +50,7 @@ app.add_middleware(
 
 # ── Shared state ────────────────────────────────────────────────────
 
-_store: LocalSchemaStore | None = None
 _file_store: LocalFileStore | None = None
-
-
-def _build_replay_code(
-    *,
-    backend_base_url: str,
-    schema_name: str,
-    schema_json: dict[str, object],
-) -> str:
-    """Build replay script text; args: backend_base_url (str), schema_name (str), schema_json (dict[str, object]); returns: str."""
-    script: str = f"""#!/usr/bin/env python3
-import json
-from pathlib import Path
-
-import httpx
-
-BACKEND_URL = {backend_base_url!r}
-SCHEMA_NAME = {schema_name!r}
-SCHEMA_JSON = {json.dumps(schema_json, indent=2)}
-EXCEL_PATH = Path("input.xlsx")
-OUT_PATH = Path("ingest_output.json")
-
-
-def main() -> int:
-    params = {{
-        "schema_name": SCHEMA_NAME,
-        "schema_json": json.dumps(SCHEMA_JSON),
-    }}
-    files = {{
-        "file": (
-            EXCEL_PATH.name,
-            EXCEL_PATH.read_bytes(),
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-    }}
-    with httpx.Client(timeout=600.0) as client:
-        resp = client.post(f"{{BACKEND_URL}}/ingest", params=params, files=files)
-        resp.raise_for_status()
-        payload = resp.json()
-
-    OUT_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(f"Wrote {{OUT_PATH}}")
-    return 0
-
-
-if __name__ == "__main__":
-    main()
-"""
-    return script
-
-
-def _get_store() -> LocalSchemaStore:
-    """Get schema-store singleton; args: none; returns: LocalSchemaStore."""
-    global _store
-    if _store is None:
-        _store = get_schema_store()
-    return _store
 
 
 def _get_file_store() -> LocalFileStore:
@@ -423,88 +365,3 @@ async def extract_with_file(
     )
 
     return response
-
-
-# ── Schema Library ──────────────────────────────────────────────────
-
-
-@app.get("/schemas")
-async def list_schemas(
-    user: dict[str, str] = Depends(get_user),
-) -> dict[str, list[dict[str, object]]]:
-    """List schemas for user; args: user (dict[str, str]); returns: dict[str, list[dict[str, object]]]."""
-    store: LocalSchemaStore = _get_store()
-    user_id: str = user.get("oid", "")
-    schemas: list[dict[str, object]] = store.list_schemas(user_id)
-    return {"schemas": schemas}
-
-
-@app.post("/schemas")
-async def create_schema(
-    schema: SchemaDefinition,
-    user: dict[str, str] = Depends(get_user),
-) -> dict[str, object]:
-    """Create schema record; args: schema (SchemaDefinition), user (dict[str, str]); returns: dict[str, object]."""
-    store: LocalSchemaStore = _get_store()
-    schema_dict: dict[str, object] = schema.model_dump(mode="json")
-    schema_dict["user_id"] = user.get("oid", "")
-    saved: dict[str, object] = store.save_schema(schema_dict)
-    return saved
-
-
-@app.put("/schemas/{schema_id}")
-async def update_schema(
-    schema_id: str,
-    schema: SchemaDefinition,
-    user: dict[str, str] = Depends(get_user),
-) -> dict[str, object]:
-    """Update schema record; args: schema_id (str), schema (SchemaDefinition), user (dict[str, str]); returns: dict[str, object]."""
-    store: LocalSchemaStore = _get_store()
-    # Verify ownership
-    existing = store.get_schema(schema_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Schema not found")
-    if existing.get("user_id") != user.get("oid", ""):
-        raise HTTPException(status_code=403, detail="Not your schema")
-
-    schema_dict: dict[str, object] = schema.model_dump(mode="json")
-    updated: dict[str, object] | None = store.update_schema(schema_id, schema_dict)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Schema not found")
-    return updated
-
-
-@app.get("/schemas/{schema_id}/history")
-async def get_schema_history(
-    schema_id: str,
-    user: dict[str, str] = Depends(get_user),
-) -> dict[str, object]:
-    """Get schema history; args: schema_id (str), user (dict[str, str]); returns: dict[str, object]."""
-    store: LocalSchemaStore = _get_store()
-    existing = store.get_schema(schema_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Schema not found")
-    if existing.get("user_id") != user.get("oid", ""):
-        raise HTTPException(status_code=403, detail="Not your schema")
-
-    history: list[dict[str, object]] = store.get_schema_history(schema_id)
-    return {"schema_id": schema_id, "versions": history}
-
-
-@app.delete("/schemas/{schema_id}")
-async def delete_schema(
-    schema_id: str,
-    user: dict[str, str] = Depends(get_user),
-) -> dict[str, bool]:
-    """Delete schema record; args: schema_id (str), user (dict[str, str]); returns: dict[str, bool]."""
-    store: LocalSchemaStore = _get_store()
-    existing = store.get_schema(schema_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="Schema not found")
-    if existing.get("user_id") != user.get("oid", ""):
-        raise HTTPException(status_code=403, detail="Not your schema")
-
-    deleted: bool = store.delete_schema(schema_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Schema not found")
-    return {"deleted": True}
