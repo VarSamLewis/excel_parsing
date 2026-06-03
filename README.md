@@ -45,6 +45,10 @@ Notable cleanup opportunities:
 1) Install dependencies
 
 ```bash
+uv pip install -r backend/requirements.txt -r cli/requirements.txt
+```
+Or with pip:
+```bash
 python3 -m pip install -r backend/requirements.txt
 python3 -m pip install -r cli/requirements.txt
 ```
@@ -55,24 +59,28 @@ python3 -m pip install -r cli/requirements.txt
 cp .env.example backend/.env
 ```
 
-Set at least:
+Then edit `backend/.env` and set at minimum:
 
-```bash
-OPENAI_API_KEY=your_key
+```ini
+OPENAI_API_KEY=your-api-key-here
 ```
 
-Optional:
+Optionally adjust the model settings:
 
-```bash
-OPENAI_BASE_URL=
+```ini
 OPENAI_MODEL_MAPPER=gpt-4o
 OPENAI_MODEL_VALIDATOR=gpt-4o-mini
+OPENAI_BASE_URL=
 ```
 
 3) Run backend
 
 ```bash
-uv run uvicorn backend.main:app --reload --port 8000
+uv run uvicorn backend.main:app --reload --port 8080
+```
+Or with pip-installed uvicorn:
+```bash
+python3 -m uvicorn backend.main:app --reload --port 8080
 ```
 
 4) Generate sample test files (optional)
@@ -148,6 +156,12 @@ python3 cli/excel_ingest_cli.py logs run --run-id run_abc123
 python3 cli/excel_ingest_cli.py logs usage --since-hours 24
 python3 cli/excel_ingest_cli.py logs runs --limit 20 --json
 ```
+
+## To-Do
+
+- **Per-prompt model configurability**: Currently `OPENAI_MODEL_MAPPER` controls both mapping and codegen, and `OPENAI_MODEL_VALIDATOR` controls both validation and verification. Make each of the four prompt types independently configurable via separate env vars.
+- **Package the project**: Replace the two `requirements.txt` files with a single `pyproject.toml`, add console-script entry points for the CLI, make `pip install -e .` work cleanly.
+- **Remove redundant functions**: Audit for any remaining dead/unused code beyond what was cleaned up in this session (e.g. `sample_sheet()`, `get_cell_value()` may be unused).
 
 ## Tests
 
