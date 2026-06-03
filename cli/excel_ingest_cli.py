@@ -104,7 +104,7 @@ import httpx
 BACKEND_URL = {backend_url!r}
 SCHEMA_PATH = Path({str(schema_path)!r})
 EXCEL_PATH = Path({str(excel_path)!r})
-OUT_PATH = Path("ingest_output.json")
+OUT_PATH = Path(f"output_{_safe_stem(excel_path)}.json")
 
 
 def main() -> int:
@@ -450,14 +450,18 @@ def ingest(
             excel_path=excel_file.resolve(),
         )
     )
+    script_body = script_body.replace(
+        'EXCEL_PATH = Path("input.xlsx")',
+        f"EXCEL_PATH = Path({str(excel_file.resolve())!r})",
+    ).replace(
+        'OUT_PATH = Path("ingest_output.json")',
+        f'OUT_PATH = Path(f"output_{excel_name}.json")',
+    )
     replay_out.write_text(script_body, encoding="utf-8")
 
     if verify:
-        verify_input: Path = out_dir / "input.xlsx"
-        verify_output: Path = out_dir / "ingest_output.json"
-        stemmed_output: Path = out_dir / f"ingest_output_{excel_name}.json"
+        verify_output: Path = out_dir / f"output_{excel_name}.json"
         verify_report: Path = out_dir / f"verification_report_{excel_name}.md"
-        verify_input.write_bytes(excel_file.read_bytes())
         try:
             subprocess.run(
                 ["python3", str(replay_out.name)],
@@ -469,9 +473,7 @@ def ingest(
         except subprocess.CalledProcessError as exc:
             raise typer.BadParameter(f"Verification run failed: {exc.stderr}") from exc
 
-        if verify_output.exists():
-            verify_output.rename(stemmed_output)
-        output_payload: str = stemmed_output.read_text(encoding="utf-8")
+        output_payload: str = verify_output.read_text(encoding="utf-8")
         try:
             with httpx.Client(timeout=180.0) as client:
                 verify_resp = client.post(
