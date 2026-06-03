@@ -329,6 +329,7 @@ def build_codegen_prompt(
     schema_name: str,
     fields: list[dict[str, object]],
     sheet_summary: dict[str, object],
+    *,
     code_template: str | None = None,
 ) -> tuple[str, str]:
     """Build codegen prompts; args: schema_name (str), fields (list[dict[str, object]]), sheet_summary (dict[str, object]), code_template (str | None); returns: tuple[str, str]."""

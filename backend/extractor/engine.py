@@ -77,7 +77,7 @@ def extract(
                     params=params,
                     row_data=raw_row,
                 )
-            except Exception as e:
+            except (ValueError, TypeError, KeyError) as e:
                 logger.warning(
                     "Transform '%s' failed on row %d, col %s: %s. Using raw value.",
                     col_mapping.transform.value,

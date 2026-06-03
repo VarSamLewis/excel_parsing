@@ -44,72 +44,9 @@ def get_sheet_names(file_bytes: bytes) -> list[str]:
     return names
 
 
-def sample_sheet(
-    file_bytes: bytes,
-    sheet_name: str | None = None,
-    max_rows: int = 20,
-    max_cols: int = 26,
-) -> dict[str, Any]:
-    """Sample the first rows/cols of a sheet for the LLM to reason about.
-
-    Returns a dict with:
-        - sheet_name: str
-        - total_rows: int (estimated)
-        - total_cols: int
-        - headers_candidate: list of cell values from the first non-empty row
-        - sample_rows: list of lists (up to max_rows rows, max_cols columns)
-        - column_letters: list of column letters for the sampled columns
-    """
-    wb = load_workbook_from_bytes(file_bytes)
-
-    if sheet_name:
-        if sheet_name not in wb.sheetnames:
-            wb.close()
-            raise ValueError(
-                f"Sheet '{sheet_name}' not found. Available: {wb.sheetnames}"
-            )
-        ws: Worksheet = wb[sheet_name]
-    else:
-        ws = wb.active
-        sheet_name = ws.title
-
-    rows: list[list[Any]] = []
-    for i, row in enumerate(ws.iter_rows(max_col=max_cols, values_only=True)):
-        if i >= max_rows:
-            break
-        rows.append(list(row))
-
-    # Find the first non-empty row as candidate header
-    headers_candidate: list[Any] = []
-    header_row_idx = 0
-    for idx, row in enumerate(rows):
-        if any(cell is not None for cell in row):
-            headers_candidate = row
-            header_row_idx = idx + 1  # 1-indexed
-            break
-
-    # Determine dimensions
-    total_rows = ws.max_row or 0
-    total_cols = ws.max_column or 0
-
-    col_count = min(max_cols, total_cols) if total_cols else max_cols
-    column_letters = [get_column_letter(c + 1) for c in range(col_count)]
-
-    wb.close()
-
-    return {
-        "sheet_name": sheet_name,
-        "total_rows": total_rows,
-        "total_cols": total_cols,
-        "header_row_candidate": header_row_idx,
-        "headers_candidate": headers_candidate,
-        "sample_rows": rows,
-        "column_letters": column_letters,
-    }
-
-
 def summarise_sheet(
     file_bytes: bytes,
+    *,
     sheet_name: str | None = None,
     max_sample_values: int = 8,
     max_distinct_categorical: int = 15,
@@ -258,11 +195,6 @@ def summarise_sheet(
         "data_start_row": header_row_idx + 2,  # 1-indexed
         "columns": column_summaries,
     }
-
-
-def get_cell_value(ws: Worksheet, row: int, col_letter: str) -> Any:
-    """Read a single cell value by row number (1-indexed) and column letter."""
-    return ws[f"{col_letter}{row}"].value
 
 
 def read_data_rows(

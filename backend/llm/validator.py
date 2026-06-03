@@ -10,10 +10,9 @@ import json
 import logging
 import random
 
-from openai import OpenAI
-
 from backend.config import settings
 from backend.models import SchemaDefinition, ValidationResult
+from backend.llm.client import get_client
 from backend.llm.prompts import build_validator_prompt, build_verify_prompt
 from backend.llm.mapper import _call_with_retry
 
@@ -22,19 +21,10 @@ logger = logging.getLogger(__name__)
 SAMPLE_SIZE = 10
 
 
-def _get_client() -> OpenAI:
-    """Create OpenAI client; args: none; returns: OpenAI."""
-    if settings.openai_base_url:
-        return OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
-        )
-    return OpenAI(api_key=settings.openai_api_key)
-
-
 def validate_extraction(
     schema: SchemaDefinition,
     extracted_data: list[dict],
+    *,
     sample_size: int = SAMPLE_SIZE,
     run_id: str = "",
 ) -> ValidationResult:
@@ -73,7 +63,7 @@ def validate_extraction(
     )
 
     # 3. Call GPT-4o-mini with retry
-    client = _get_client()
+    client = get_client()
     logger.info(
         "Calling GPT-4o-mini validator with %d sample rows",
         len(sample),
@@ -121,6 +111,7 @@ def verify_generated_output(
     schema_json: str,
     generated_code: str,
     output_json: str,
+    *,
     run_id: str = "",
 ) -> str:
     """Generate markdown verification report; args: schema_json (str), generated_code (str), output_json (str), run_id (str); returns: str."""
@@ -131,7 +122,7 @@ def verify_generated_output(
         code_text=generated_code[:6000],
         output_text=output_json[:8000],
     )
-    client: OpenAI = _get_client()
+    client = get_client()
     report: str = _call_with_retry(
         client,
         step="verify",
