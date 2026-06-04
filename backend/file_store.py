@@ -49,15 +49,6 @@ class LocalFileStore:
             return None
         return path.read_bytes()
 
-    def file_exists(self: "LocalFileStore", user_id: str, file_hash: str) -> bool:
-        """Check file existence; args: user_id (str), file_hash (str); returns: bool."""
-        path: Path = self._file_path(user_id, file_hash)
-        return path.exists()
-
-    def get_storage_path(self: "LocalFileStore", user_id: str, file_hash: str) -> str:
-        """Return storage path string; args: user_id (str), file_hash (str); returns: str."""
-        return str(self._file_path(user_id, file_hash))
-
 
 def get_file_store() -> LocalFileStore:
     """Create local file store; args: none; returns: LocalFileStore."""

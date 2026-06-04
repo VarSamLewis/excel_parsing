@@ -7,7 +7,7 @@ import uuid
 import logging
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
@@ -65,9 +65,8 @@ def _get_file_store() -> LocalFileStore:
 # ── Auth dependency ─────────────────────────────────────────────────
 
 
-async def get_user(request: Request) -> dict[str, str]:
-    """Return local stub user; args: request (Request); returns: dict[str, str]."""
-    _ = request
+async def get_user() -> dict[str, str]:
+    """Return local stub user; args: none; returns: dict[str, str]."""
     return {"oid": "local-dev-user", "name": "Local Developer"}
 
 
@@ -85,7 +84,6 @@ async def health() -> dict[str, str]:
 
 @app.post("/ingest", response_model=IngestResponse)
 async def ingest(
-    request: Request,
     file: UploadFile = File(...),
     schema_name: str = Query(..., description="Schema name"),
     schema_json: str = Query(..., description="JSON-encoded schema definition"),
@@ -122,7 +120,7 @@ async def ingest(
         raise HTTPException(status_code=422, detail=f"Invalid schema: {e}") from e
 
     schema_id = schema.id or "ephemeral"
-    schema_version = getattr(schema, "version", 1)
+    schema_version = schema.version
     replay_code: str = ""
 
     # 1. Store the uploaded file
@@ -340,11 +338,14 @@ async def extract_with_file(
     """
     fstore: LocalFileStore = _get_file_store()
     user_id: str = user.get("oid", "local-dev-user")
+    run_id: str = f"run_{uuid.uuid4().hex[:12]}"
 
     # Get file bytes: from upload or from storage
+    storage_path = ""
     if file is not None:
         file_bytes = await file.read()
         file_hash = compute_file_hash(file_bytes)
+        storage_path = fstore.store_file(user_id, file_hash, file_bytes)
     elif excel_hash:
         file_bytes = fstore.retrieve_file(user_id, excel_hash)
         if file_bytes is None:
@@ -353,6 +354,7 @@ async def extract_with_file(
                 detail="File not found in storage. Please re-upload.",
             )
         file_hash = excel_hash
+        storage_path = fstore.store_file(user_id, file_hash, file_bytes)
     else:
         raise HTTPException(
             status_code=400,
@@ -371,15 +373,27 @@ async def extract_with_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Extraction failed: {e}") from e
 
+    sheet_names = get_sheet_names(file_bytes)
+    sheet_result = SheetResult(
+        sheet_name=mapping.sheet_name,
+        mapping=mapping,
+        data=data_rows,
+        lineage=lineage,
+        row_count=len(data_rows),
+    )
+
     response = IngestResponse(
         success=True,
         excel_hash=file_hash,
         schema_id=schema_id,
+        sheet_names=sheet_names,
+        sheets=[sheet_result],
         mapping=mapping,
-        validation=None,
         data=data_rows,
         lineage=lineage,
         row_count=len(data_rows),
+        file_storage_path=storage_path,
+        run_id=run_id,
         created_at=datetime.now(timezone.utc),
     )
 

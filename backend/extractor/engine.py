@@ -63,18 +63,11 @@ def extract(
         for col_mapping in mapping.mappings:
             raw_value = raw_row.get(col_mapping.source_col)
 
-            # Apply the transform, passing params and row data for
-            # parameterised / row-aware transforms
             try:
-                params = (
-                    col_mapping.transform_params
-                    if col_mapping.transform_params
-                    else None
-                )
                 transformed = apply_transform(
                     col_mapping.transform.value,
                     raw_value,
-                    params=params,
+                    params=col_mapping.transform_params,
                     row_data=raw_row,
                 )
             except (ValueError, TypeError, KeyError) as e:

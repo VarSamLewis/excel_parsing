@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+from collections import Counter
 from typing import Any
 
 from openpyxl import load_workbook
@@ -67,8 +68,6 @@ def summarise_sheet(
         - dominant_type: the most common Python type name seen
         - type_inconsistencies: description of any type mismatches
     """
-    from collections import Counter
-
     wb = load_workbook_from_bytes(file_bytes)
 
     if sheet_name:
