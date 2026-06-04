@@ -14,7 +14,7 @@ from backend.config import settings
 from backend.models import SchemaDefinition, ValidationResult
 from backend.llm.client import get_client
 from backend.llm.prompts import build_validator_prompt, build_verify_prompt
-from backend.llm.mapper import _call_with_retry
+from backend.llm.client import call_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def validate_extraction(
         len(sample),
     )
 
-    raw_content = _call_with_retry(
+    raw_content = call_with_retry(
         client,
         step="validation",
         run_id=run_id,
@@ -125,7 +125,7 @@ def verify_generated_output(
         precheck_report=precheck_report,
     )
     client = get_client()
-    report: str = _call_with_retry(
+    report: str = call_with_retry(
         client,
         step="verify",
         run_id=run_id,

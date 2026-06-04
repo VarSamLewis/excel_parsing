@@ -205,29 +205,6 @@ def format_fields_for_prompt(fields: list[dict[str, object]]) -> str:
     return "\n".join(lines)
 
 
-def format_sample_rows(rows: list[list[object]], column_letters: list[str]) -> str:
-    """Format sampled rows into table text; args: rows (list[list[object]]), column_letters (list[str]); returns: str."""
-    lines: list[str] = []
-    # Header line with column letters
-    header: str = "Row | " + " | ".join(column_letters)
-    lines.append(header)
-    lines.append("-" * len(header))
-
-    i: int
-    row: list[object]
-    for i, row in enumerate(rows):
-        cells: list[str] = []
-        j: int
-        val: object
-        for j, val in enumerate(row):
-            if j >= len(column_letters):
-                break
-            cells.append(str(val) if val is not None else "")
-        lines.append(f"  {i + 1} | " + " | ".join(cells))
-
-    return "\n".join(lines)
-
-
 def format_column_summary(column: dict[str, object]) -> str:
     """Format one column summary block; args: column (dict[str, object]); returns: str."""
     lines: list[str] = [
@@ -266,41 +243,18 @@ def build_mapper_prompt(
     """Build mapper prompts; args: schema_name (str), fields (list[dict[str, object]]), sheet_summary (dict[str, object]); returns: tuple[str, str]."""
     fields_text: str = format_fields_for_prompt(fields)
 
-    # New column-summary format
-    if "columns" in sheet_summary:
-        columns_raw: object = sheet_summary["columns"]
-        columns: list[dict[str, object]] = cast(list[dict[str, object]], columns_raw)
-        column_summaries_text: str = format_column_summaries(columns)
-        user_prompt: str = MAPPER_USER_PROMPT.format(
-            schema_name=schema_name,
-            fields_text=fields_text,
-            sheet_name=sheet_summary["sheet_name"],
-            total_rows=sheet_summary["total_rows"],
-            header_row=sheet_summary.get("header_row", 1),
-            data_start_row=sheet_summary.get("data_start_row", 2),
-            column_summaries_text=column_summaries_text,
-        )
-    else:
-        # Legacy fallback: sample_rows format
-        sample_rows_raw: object = sheet_summary["sample_rows"]
-        column_letters_raw: object = sheet_summary["column_letters"]
-        sample_rows: list[list[object]] = cast(list[list[object]], sample_rows_raw)
-        column_letters: list[str] = cast(list[str], column_letters_raw)
-        sample_text: str = format_sample_rows(sample_rows, column_letters)
-        sample_rows_count: int = len(sample_rows)
-        column_letters_csv: str = ", ".join(column_letters)
-        # Use the old-style prompt with inline formatting
-        user_prompt = (
-            f"## Schema to extract\n\n"
-            f"Name: {schema_name}\n\n"
-            f"Fields:\n{fields_text}\n\n"
-            f"## Excel file sample\n\n"
-            f'Sheet: "{sheet_summary["sheet_name"]}"\n'
-            f"Estimated rows: {sheet_summary['total_rows']}\n"
-            f"Column letters: {column_letters_csv}\n\n"
-            f"Sample data (first {sample_rows_count} rows):\n"
-            f"{sample_text}\n"
-        )
+    columns_raw: object = sheet_summary["columns"]
+    columns: list[dict[str, object]] = cast(list[dict[str, object]], columns_raw)
+    column_summaries_text: str = format_column_summaries(columns)
+    user_prompt: str = MAPPER_USER_PROMPT.format(
+        schema_name=schema_name,
+        fields_text=fields_text,
+        sheet_name=sheet_summary["sheet_name"],
+        total_rows=sheet_summary["total_rows"],
+        header_row=sheet_summary.get("header_row", 1),
+        data_start_row=sheet_summary.get("data_start_row", 2),
+        column_summaries_text=column_summaries_text,
+    )
 
     return MAPPER_SYSTEM_PROMPT, user_prompt
 

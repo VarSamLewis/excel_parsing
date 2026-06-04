@@ -7,7 +7,7 @@ No LLM calls, no side effects, no imports beyond stdlib.
 from __future__ import annotations
 
 import re
-from datetime import datetime, date
+from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
 
@@ -46,8 +46,6 @@ def to_date(value: Any) -> str | None:
             serial = int(value)
             if 1 <= serial <= 2958465:  # valid Excel date range
                 # Excel epoch is 1899-12-30 (accounting for the 1900 leap year bug)
-                from datetime import timedelta
-
                 base = date(1899, 12, 30)
                 return (base + timedelta(days=serial)).isoformat()
         except (ValueError, OverflowError):

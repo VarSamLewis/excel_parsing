@@ -107,17 +107,6 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _emit(data: Any, as_json: bool) -> None:
-    """Emit CLI output; args: data (Any), as_json (bool); returns: None."""
-    if as_json:
-        typer.echo(json.dumps(data, indent=2))
-        return
-    if isinstance(data, str):
-        typer.echo(data)
-    else:
-        typer.echo(str(data))
-
-
 def _default_replay_script(
     *, backend_url: str, schema_path: Path, excel_path: Path
 ) -> str:
@@ -209,9 +198,8 @@ def logs_runs(
             }
         )
     if as_json:
-        _emit(payload, True)
+        typer.echo(json.dumps(payload, indent=2))
         return
-    item: dict[str, object]
     for item in payload:
         typer.echo(
             f"{item['run_id']} start={item['started_at']} end={item['ended_at']} events={item['event_count']}"
@@ -244,9 +232,8 @@ def logs_run(
             }
         )
     if as_json:
-        _emit(payload, True)
+        typer.echo(json.dumps(payload, indent=2))
         return
-    item: dict[str, object]
     for item in payload:
         typer.echo(
             f"{item['created_at']} {item['level']} {item['event']} duration_ms={item['duration_ms']}"
@@ -286,9 +273,8 @@ def logs_usage(
             }
         )
     if as_json:
-        _emit(payload, True)
+        typer.echo(json.dumps(payload, indent=2))
         return
-    item: dict[str, object]
     for item in payload:
         typer.echo(
             f"step={item['step']} calls={item['calls']} total_tokens={item['total_tokens']} avg_latency_ms={item['avg_latency_ms']}"
