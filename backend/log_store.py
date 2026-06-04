@@ -94,6 +94,29 @@ def write_event(
     con.close()
 
 
+def get_events(run_id: str) -> list[dict[str, object]]:
+    """Fetch log events for a run; args: run_id (str); returns: list[dict[str, object]]."""
+    if not DB_PATH.exists():
+        return []
+    con: sqlite3.Connection = _conn()
+    cur: sqlite3.Cursor = con.cursor()
+    cur.execute(
+        "SELECT created_at, level, event, duration_ms FROM events WHERE run_id = ? ORDER BY id",
+        (run_id,),
+    )
+    rows: list[dict[str, object]] = [
+        {
+            "created_at": row[0],
+            "level": row[1],
+            "event": row[2],
+            "duration_ms": row[3],
+        }
+        for row in cur.fetchall()
+    ]
+    con.close()
+    return rows
+
+
 def write_llm_usage(
     step: str,
     model: str,

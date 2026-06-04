@@ -1,0 +1,8 @@
+services:
+  backend:
+    container_name: ingest-excel-backend
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/.env:/app/backend/.env

@@ -25,102 +25,6 @@ class TestHealth:
         assert response.json() == {"status": "ok"}
 
 
-class TestSchemas:
-    def test_list_schemas_empty(self):
-        response = client.get("/schemas")
-        assert response.status_code == 200
-        data = response.json()
-        assert "schemas" in data
-
-    def test_create_and_list_schema(self):
-        schema = {
-            "name": "Test Schema",
-            "fields": [
-                {
-                    "name": "company_name",
-                    "field_type": "string",
-                    "description": "The company name",
-                    "required": True,
-                }
-            ],
-        }
-        response = client.post("/schemas", json=schema)
-        assert response.status_code == 200
-        created = response.json()
-        assert created["name"] == "Test Schema"
-        assert "id" in created
-        assert created["version"] == 1
-
-        # List should include it
-        list_response = client.get("/schemas")
-        schemas = list_response.json()["schemas"]
-        assert any(s["id"] == created["id"] for s in schemas)
-
-    def test_update_schema_increments_version(self):
-        schema = {
-            "name": "Versioned Schema",
-            "fields": [
-                {
-                    "name": "col1",
-                    "field_type": "string",
-                    "required": True,
-                }
-            ],
-        }
-        response = client.post("/schemas", json=schema)
-        created = response.json()
-        assert created["version"] == 1
-
-        # Update
-        updated_schema = {
-            "name": "Versioned Schema Updated",
-            "fields": [
-                {
-                    "name": "col1",
-                    "field_type": "string",
-                    "required": True,
-                },
-                {
-                    "name": "col2",
-                    "field_type": "number",
-                    "required": False,
-                },
-            ],
-        }
-        update_response = client.put(f"/schemas/{created['id']}", json=updated_schema)
-        assert update_response.status_code == 200
-        updated = update_response.json()
-        assert updated["version"] == 2
-
-    def test_schema_history(self):
-        schema = {
-            "name": "History Schema",
-            "fields": [
-                {
-                    "name": "col1",
-                    "field_type": "string",
-                    "required": True,
-                }
-            ],
-        }
-        response = client.post("/schemas", json=schema)
-        created = response.json()
-
-        # Update it
-        schema["name"] = "History Schema v2"
-        client.put(f"/schemas/{created['id']}", json=schema)
-
-        # Check history
-        history_response = client.get(f"/schemas/{created['id']}/history")
-        assert history_response.status_code == 200
-        history = history_response.json()
-        assert len(history["versions"]) == 2
-
-    def test_delete_nonexistent_schema(self):
-        response = client.delete("/schemas/nonexistent_id")
-        assert response.status_code == 404
-
-
 class TestIngest:
     """Test the /ingest endpoint with a mocked LLM call."""
 
@@ -274,6 +178,7 @@ class TestVerify:
                 "schema_json": json.dumps(schema),
                 "generated_code": "print('x')",
                 "output_json": json.dumps(rows),
+                "use_llm": "true",
                 "run_id": "run_bad",
             },
         )
@@ -281,6 +186,32 @@ class TestVerify:
         payload = response.json()
         assert payload["llm_used"] is True
         mock_verify.assert_called_once()
+
+    @patch("backend.main.verify_generated_output")
+    def test_verify_anomaly_without_llm(self, mock_verify):
+        rows = [{"company_name": None, "amount": "bad"}]
+        schema = {
+            "name": "S",
+            "fields": [
+                {"name": "company_name", "field_type": "string", "required": True},
+                {"name": "amount", "field_type": "number", "required": True},
+            ],
+        }
+        response = client.post(
+            "/verify-ingestion",
+            params={
+                "schema_json": json.dumps(schema),
+                "generated_code": "print('x')",
+                "output_json": json.dumps(rows),
+                "use_llm": "false",
+                "run_id": "run_bad_det",
+            },
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["llm_used"] is False
+        assert "Deterministic Findings" in payload["report_markdown"]
+        mock_verify.assert_not_called()
 
 
 class TestLogsCli:

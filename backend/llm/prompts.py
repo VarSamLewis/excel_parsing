@@ -90,6 +90,7 @@ Rules:
 4. Assign a confidence score from 0.0 to 1.0.
 5. Set "passed" to true if confidence >= 0.70, false otherwise.
 6. List specific issues with field name, description, severity, and example rows.
+7. Do NOT flag date values as being in the future or past — date validation is handled separately.
 """
 
 VALIDATOR_USER_PROMPT = """\
@@ -122,9 +123,16 @@ Return a JSON object with this exact structure:
 """
 
 VERIFY_SYSTEM_PROMPT = """\
-You are a data ingestion QA reviewer.
-Assess whether generated ingestion output matches a target schema.
-Return markdown only.
+You are a data ingestion QA reviewer adding commentary to a deterministic \
+precheck report. The precheck has already checked null rates, type mismatches, \
+and future dates. Do NOT repeat those checks.
+
+Your job is to review the schema, generated code, output data, and precheck \
+report, then add high-level contextual commentary. Focus on patterns, edge \
+cases, data quality risks, or suggestions the deterministic checks might miss.
+
+Return markdown only — a short paragraph or bullet points. Do not include \
+headings like "## LLM Commentary" or "## Summary" — just the commentary text.
 """
 
 VERIFY_USER_PROMPT = """\
@@ -137,12 +145,11 @@ VERIFY_USER_PROMPT = """\
 ## Produced output sample
 {output_text}
 
-Produce a markdown report with sections:
-- Summary
-- Schema Coverage
-- Type Quality
-- Issues
-- Recommendation
+## Deterministic Precheck Report
+{precheck_report}
+
+Add contextual commentary on data quality, edge cases, or risks \
+not covered by the deterministic checks above.
 """
 
 
@@ -354,12 +361,13 @@ def build_codegen_prompt(
 
 
 def build_verify_prompt(
-    schema_json: str, code_text: str, output_text: str
+    schema_json: str, code_text: str, output_text: str, precheck_report: str = ""
 ) -> tuple[str, str]:
-    """Build verify prompts; args: schema_json (str), code_text (str), output_text (str); returns: tuple[str, str]."""
+    """Build verify prompts; args: schema_json (str), code_text (str), output_text (str), precheck_report (str); returns: tuple[str, str]."""
     user_prompt: str = VERIFY_USER_PROMPT.format(
         schema_text=schema_json,
         code_text=code_text,
         output_text=output_text,
+        precheck_report=precheck_report,
     )
     return VERIFY_SYSTEM_PROMPT, user_prompt

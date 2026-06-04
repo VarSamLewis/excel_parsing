@@ -8,6 +8,7 @@ import json
 import os
 import sqlite3
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,34 @@ def _handle_error(exc: Exception) -> None:
     raise exc
 
 
+def _print_debug_logs(run_id: str, backend_url: str = "") -> None:
+    """Print log events for a run to stderr via API; args: run_id (str), backend_url (str); returns: None."""
+    if not run_id:
+        typer.echo("(no run_id)", err=True)
+        return
+    try:
+        base = _backend_url(backend_url or None)
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.get(f"{base}/logs/{run_id}")
+            resp.raise_for_status()
+            data = resp.json()
+        events: list[dict[str, object]] = data.get("events", [])
+        if not events:
+            typer.echo("(no log events found)", err=True)
+            return
+        typer.echo("── Logs ──────────────────────", err=True)
+        for ev in events:
+            created_at = ev.get("created_at", "")
+            level = ev.get("level", "")
+            event = ev.get("event", "")
+            duration_ms = ev.get("duration_ms")
+            dur = f" [{duration_ms}ms]" if duration_ms else ""
+            typer.echo(f"  {created_at} [{level}] {event}{dur}", err=True)
+        typer.echo("──────────────────────────────", err=True)
+    except Exception as e:
+        typer.echo(f"(failed to fetch logs: {e})", err=True)
+
+
 def _write_json(path: Path, payload: Any) -> None:
     """Write JSON payload to disk; args: path (Path), payload (Any); returns: None."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -102,7 +131,7 @@ import httpx
 BACKEND_URL = {backend_url!r}
 SCHEMA_PATH = Path({str(schema_path)!r})
 EXCEL_PATH = Path({str(excel_path)!r})
-OUT_PATH = Path(f"output_{_safe_stem(excel_path)}.json")
+OUT_PATH = Path(f"extracted_data_{_safe_stem(excel_path)}.json")
 
 
 def main() -> int:
@@ -271,9 +300,13 @@ def ingest(
     schema_file: Path = typer.Option(..., exists=True, dir_okay=False),
     excel_file: Path = typer.Option(..., exists=True, dir_okay=False),
     out_dir: Path = typer.Option(Path("./artifacts"), help="Artifact output directory"),
-    verify: bool = typer.Option(
+    llm_verify: bool = typer.Option(
         False,
-        help="Run generated script and request verification markdown report",
+        help="Include LLM contextual commentary in the verification report",
+    ),
+    debug: bool = typer.Option(
+        False,
+        help="Print structured log events to stderr after ingest",
     ),
     code_template: Path | None = typer.Option(
         None,
@@ -315,9 +348,14 @@ def ingest(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     excel_name: str = _safe_stem(excel_file)
-    replay_out = out_dir / f"ingest_{excel_name}.py"
+    timestamp: str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
+    replay_out = out_dir / f"extraction_code_{excel_name}_{timestamp}.py"
 
-    ingest_out = out_dir / f"ingest_{excel_name}.json"
+    ingest_out = out_dir / f"ingestion_report_{excel_name}_{timestamp}.json"
+    # Strip data rows from the persisted response to keep the artifact small
+    ingest_payload.pop("data", None)
+    for sheet in ingest_payload.get("sheets", []):
+        sheet.pop("data", None)
     _write_json(ingest_out, ingest_payload)
     replay_code = ingest_payload.get("replay_code")
     script_body = (
@@ -334,59 +372,51 @@ def ingest(
         f"EXCEL_PATH = Path({str(excel_file.resolve())!r})",
     ).replace(
         'OUT_PATH = Path("ingest_output.json")',
-        f'OUT_PATH = Path(f"output_{excel_name}.json")',
+        f'OUT_PATH = Path(f"extracted_data_{excel_name}_{timestamp}.json")',
     )
     replay_out.write_text(script_body, encoding="utf-8")
 
-    if verify:
-        verify_output: Path = out_dir / f"output_{excel_name}.json"
-        verify_report: Path = out_dir / f"verification_report_{excel_name}.md"
-        try:
-            subprocess.run(
-                ["python3", str(replay_out.name)],
-                cwd=str(out_dir),
-                check=True,
-                capture_output=True,
-                text=True,
+    # Always run deterministic verification
+    verify_output: Path = out_dir / f"extracted_data_{excel_name}_{timestamp}.json"
+    verify_report: Path = out_dir / f"verify_report_{excel_name}_{timestamp}.md"
+    try:
+        subprocess.run(
+            ["python3", str(replay_out.name)],
+            cwd=str(out_dir),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise typer.BadParameter(f"Verification run failed: {exc.stderr}") from exc
+
+    output_payload: str = verify_output.read_text(encoding="utf-8")
+    try:
+        with httpx.Client(timeout=180.0) as client:
+            verify_resp = client.post(
+                f"{base}/verify-ingestion",
+                params={
+                    "schema_json": json.dumps(schema_payload),
+                    "generated_code": script_body,
+                    "output_json": output_payload,
+                    "use_llm": str(llm_verify).lower(),
+                    "run_id": str(ingest_payload.get("run_id", "")),
+                },
             )
-        except subprocess.CalledProcessError as exc:
-            raise typer.BadParameter(f"Verification run failed: {exc.stderr}") from exc
+            verify_resp.raise_for_status()
+            verify_payload: dict[str, Any] = verify_resp.json()
+    except Exception as exc:
+        _handle_error(exc)
 
-        output_payload: str = verify_output.read_text(encoding="utf-8")
-        try:
-            with httpx.Client(timeout=180.0) as client:
-                verify_resp = client.post(
-                    f"{base}/verify-ingestion",
-                    params={
-                        "schema_json": json.dumps(schema_payload),
-                        "generated_code": script_body,
-                        "output_json": output_payload,
-                        "run_id": str(ingest_payload.get("run_id", "")),
-                    },
-                )
-                verify_resp.raise_for_status()
-                verify_payload: dict[str, Any] = verify_resp.json()
-        except Exception as exc:
-            _handle_error(exc)
-
-        report_text: object = verify_payload.get("report_markdown", "")
-        verify_report.write_text(str(report_text), encoding="utf-8")
-        typer.echo(f"Wrote {verify_report}")
-
-    row_count = ingest_payload.get("row_count")
-    sheets = ingest_payload.get("sheet_names")
-    validation_raw = ingest_payload.get("validation")
-    validation = validation_raw if isinstance(validation_raw, dict) else {}
-    confidence = validation.get("confidence")
-    issues_raw = validation.get("issues")
-    issues = issues_raw if isinstance(issues_raw, list) else []
-    confidence_str = (
-        f"{float(confidence):.3f}" if isinstance(confidence, (int, float)) else "n/a"
-    )
-
-    typer.echo(f"Ingest OK: rows={row_count} sheets={sheets}  issues={len(issues)}")
+    report_text: object = verify_payload.get("report_markdown", "")
+    verify_report.write_text(str(report_text), encoding="utf-8")
+    typer.echo(str(report_text))
     typer.echo(f"Wrote {replay_out}")
     typer.echo(f"Wrote {ingest_out}")
+    typer.echo(f"Wrote {verify_report}")
+
+    if debug:
+        _print_debug_logs(str(ingest_payload.get("run_id", "")), backend_url=base)
 
 
 @app.command("ingest-dir")
@@ -394,9 +424,13 @@ def ingest_dir(
     schema_file: Path = typer.Option(..., exists=True, dir_okay=False),
     excel_dir: Path = typer.Option(..., exists=True, file_okay=False),
     out_dir: Path = typer.Option(Path("./artifacts"), help="Artifact output directory"),
-    verify: bool = typer.Option(
+    llm_verify: bool = typer.Option(
         False,
-        help="Run generated script and request verification markdown report",
+        help="Include LLM contextual commentary in the verification report",
+    ),
+    debug: bool = typer.Option(
+        False,
+        help="Print structured log events to stderr after ingest",
     ),
     code_template: Path | None = typer.Option(
         None,
@@ -417,7 +451,8 @@ def ingest_dir(
             schema_file=schema_file,
             excel_file=excel_path,
             out_dir=out_dir,
-            verify=verify,
+            llm_verify=llm_verify,
+            debug=debug,
             code_template=code_template,
             backend_url=backend_url,
         )
