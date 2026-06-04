@@ -9,6 +9,7 @@ uploads/*
 !uploads/.gitkeep
 artifacts/*
 !artifacts/.gitkeep
+backend/data/ingest_logs.db
 
 # Test / lint caches
 .pytest_cache/
