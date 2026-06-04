@@ -1,0 +1,7 @@
+.git
+__pycache__
+*.pyc
+.venv
+backend/.env
+backend/data/ingest_logs.db
+uploads

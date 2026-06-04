@@ -1,4 +1,4 @@
-# ingest-fresh
+# ingest-excel
 
 Local-first Excel ingestion system with a FastAPI backend and Typer CLI.
 
@@ -7,7 +7,8 @@ Given an Excel file and a target schema, it can:
 - infer mappings via GPT-4o,
 - extract structured rows using a deterministic transform engine,
 - generate runnable Python ingestion code,
-- optionally verify generated output with deterministic prechecks + LLM narrative,
+- verify output with deterministic prechecks (null rates, type mismatches, future dates),
+- optionally include LLM contextual commentary on the verification report,
 - and log run/LLM metadata to SQLite for local analysis.
 
 ## Architecture
@@ -19,28 +20,54 @@ Given an Excel file and a target schema, it can:
   - Logs: `backend/data/ingest_logs.db`
   - Uploads: `uploads/`
 
-## Requirements
-
-- Python 3.12+
-- `uv` recommended (or `pip`)
-- OpenAI API key (or compatible endpoint)
-
 ## Quickstart
 
 See [docs/usage.md](docs/usage.md) for full instructions.
 
-```bash
-# 1. Install dependencies
-uv pip install -r backend/requirements.txt -r cli/requirements.txt
+### Backend (Docker)
 
-# 2. Configure environment
+```bash
 cp .env.example backend/.env
 # Edit backend/.env and set OPENAI_API_KEY
 
-# 3. Run backend
-uv run uvicorn backend.main:app --reload --port 8080
+docker compose up -d
+```
 
-# 4. Run ingest (in another terminal)
+### CLI (pip install)
+
+```bash
+pip install -e .
+ingest-excel health
+ingest-excel ingest \
+  --schema-file ./test_schemas/people_sample.schema.json \
+  --excel-file ./test_excels/people_sample.xlsx \
+  --out-dir ./artifacts/people
+```
+
+With LLM commentary on the verification report:
+
+```bash
+ingest-excel ingest \
+  --schema-file ./test_schemas/people_sample.schema.json \
+  --excel-file ./test_excels/people_sample.xlsx \
+  --out-dir ./artifacts/people \
+  --llm-verify
+```
+
+With debug logging:
+
+```bash
+ingest-excel ingest \
+  --schema-file ./test_schemas/people_sample.schema.json \
+  --excel-file ./test_excels/people_sample.xlsx \
+  --out-dir ./artifacts/people \
+  --debug
+```
+
+Or without installing:
+
+```bash
+pip install typer httpx
 python3 cli/excel_ingest_cli.py ingest \
   --schema-file ./test_schemas/people_sample.schema.json \
   --excel-file ./test_excels/people_sample.xlsx \
@@ -52,7 +79,9 @@ python3 cli/excel_ingest_cli.py ingest \
 | Command | Description |
 |---|---|
 | `health` | Check backend is running |
-| `ingest` | Ingest one Excel file |
+| `ingest` | Ingest one Excel file (deterministic verification always runs) |
+| `ingest --llm-verify` | Include LLM contextual commentary in the verification report |
+| `ingest --debug` | Print structured log events to stderr after ingest |
 | `ingest-dir` | Ingest all `.xlsx` files in a directory |
 | `logs runs` | List recent run IDs |
 | `logs run` | Show events for one run |
@@ -60,15 +89,14 @@ python3 cli/excel_ingest_cli.py ingest \
 
 Outputs in `--out-dir`:
 
-- `ingest_<name>.py` — generated/replay Python script
-- `ingest_<name>.json` — full ingest payload
-- `output_<name>.json` — output from replay script (when `--verify`)
-- `verification_report_<name>.md` — quality report (when `--verify`)
+- `extraction_code_<name>_<timestamp>.py` — generated/replay Python script
+- `ingestion_report_<name>_<timestamp>.json` — ingest payload (mapping, validation, replay code; no data rows)
+- `extracted_data_<name>_<timestamp>.json` — output from replay script
+- `verify_report_<name>_<timestamp>.md` — deterministic quality report (with LLM commentary if `--llm-verify`)
 
 ## To-Do
 
 - **Per-prompt model configurability**: Make each of the four prompt types independently configurable via separate env vars.
-- **Package the project**: Replace the two `requirements.txt` files with a single `pyproject.toml`, add console-script entry points.
 - **Runtime artifacts in git**: Add `.gitignore` rules for `uploads/`, sqlite db, and generated files.
 
 ## Tests

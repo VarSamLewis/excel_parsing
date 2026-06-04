@@ -111,16 +111,18 @@ def verify_generated_output(
     schema_json: str,
     generated_code: str,
     output_json: str,
+    precheck_report: str = "",
     *,
     run_id: str = "",
 ) -> str:
-    """Generate markdown verification report; args: schema_json (str), generated_code (str), output_json (str), run_id (str); returns: str."""
+    """Generate LLM commentary on the deterministic precheck report; args: schema_json (str), generated_code (str), output_json (str), precheck_report (str), run_id (str); returns: str."""
     system_prompt: str
     user_prompt: str
     system_prompt, user_prompt = build_verify_prompt(
         schema_json=schema_json,
         code_text=generated_code[:6000],
         output_text=output_json[:8000],
+        precheck_report=precheck_report,
     )
     client = get_client()
     report: str = _call_with_retry(

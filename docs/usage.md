@@ -1,21 +1,57 @@
-# ingest-fresh Usage Guide
+# ingest-excel Usage Guide
 
 ## Installation
 
-### Dependencies
+### Backend (Docker)
 
 ```bash
-uv pip install -r backend/requirements.txt -r cli/requirements.txt
+docker compose up -d
 ```
 
-Or with pip:
+The backend runs on `http://localhost:8080`.
+
+To rebuild after changes:
 
 ```bash
-python3 -m pip install -r backend/requirements.txt
-python3 -m pip install -r cli/requirements.txt
+docker compose build
+docker compose up -d
 ```
 
-### Configuration
+### CLI (pip install — recommended)
+
+From the repo root:
+
+```bash
+pip install -e .
+```
+
+This installs the `ingest-excel` command globally (in your current venv/system):
+
+```bash
+ingest-excel --help
+ingest-excel health
+ingest-excel ingest \
+  --schema-file ./test_schemas/people_sample.schema.json \
+  --excel-file ./test_excels/people_sample.xlsx \
+  --out-dir ./artifacts/people
+```
+
+For an isolated install:
+
+```bash
+pipx install .
+```
+
+### CLI (without installing)
+
+Just install the two deps manually:
+
+```bash
+pip install typer httpx
+python3 cli/excel_ingest_cli.py --help
+```
+
+## Configuration
 
 ```bash
 cp .env.example backend/.env
@@ -36,21 +72,34 @@ OPENAI_BASE_URL=                         # OpenAI-compatible endpoint
 LOG_LEVEL=INFO
 ```
 
+> If running the backend without Docker, remember to create `backend/.env` before starting uvicorn.
+
 ## Running the Backend
 
+### With Docker (recommended)
+
 ```bash
-uv run uvicorn backend.main:app --reload --port 8080
+docker compose up -d
 ```
 
-Or with pip-installed uvicorn:
+View logs:
 
 ```bash
-python3 -m uvicorn backend.main:app --reload --port 8080
+docker compose logs -f
+```
+
+### Without Docker
+
+```bash
+pip install -r backend/requirements.in
+uvicorn backend.main:app --reload --port 8080
 ```
 
 Health check:
 
 ```bash
+ingest-excel health
+# or
 python3 cli/excel_ingest_cli.py health
 ```
 
@@ -97,7 +146,7 @@ Schemas are JSON files. Example (`test_schemas/people_sample.schema.json`):
 ## Ingesting a Single File
 
 ```bash
-python3 cli/excel_ingest_cli.py ingest \
+ingest-excel ingest \
   --schema-file ./test_schemas/people_sample.schema.json \
   --excel-file ./test_excels/people_sample.xlsx \
   --out-dir ./artifacts/people
@@ -105,31 +154,41 @@ python3 cli/excel_ingest_cli.py ingest \
 
 This produces:
 
-- `artifacts/people/ingest_people_sample.py` — replay script
-- `artifacts/people/ingest_people_sample.json` — full ingest payload
+- `extraction_code_people_sample_<timestamp>.py` — replay script
+- `ingestion_report_people_sample_<timestamp>.json` — ingest payload (mapping, validation, replay code; no data rows)
+- `extracted_data_people_sample_<timestamp>.json` — output from replay script
+- `verify_report_people_sample_<timestamp>.md` — deterministic quality report
 
-### With Verification
+The deterministic verification (replay script + precheck) always runs. The report is printed to stdout and saved to the file.
+
+### With LLM Commentary
 
 ```bash
-python3 cli/excel_ingest_cli.py ingest \
+ingest-excel ingest \
   --schema-file ./test_schemas/people_sample.schema.json \
   --excel-file ./test_excels/people_sample.xlsx \
   --out-dir ./artifacts/people \
-  --verify
+  --llm-verify
 ```
 
-With `--verify`, the CLI:
+Deterministic verification (null rates, type mismatches, future dates) runs on every ingest by default — no flag needed. The `--llm-verify` flag additionally sends the deterministic report + output data to GPT-4o-mini for contextual commentary, which gets appended to the report under "## LLM Narrative".
 
-1. Runs `ingest_people_sample.py` as a subprocess (replays the API call)
-2. Sends the produced output to `POST /verify-ingestion`
-3. Writes `verification_report_people_sample.md` with:
-   - **Deterministic precheck**: null rates, type mismatch rates per field
-   - **LLM narrative** (only if precheck finds issues): GPT-4o-mini analyses the output
+### With Debug Logging
+
+```bash
+ingest-excel ingest \
+  --schema-file ./test_schemas/people_sample.schema.json \
+  --excel-file ./test_excels/people_sample.xlsx \
+  --out-dir ./artifacts/people \
+  --debug
+```
+
+Prints structured log events (timestamps, levels, event names, durations) to stderr by querying `GET /logs/{run_id}` on the backend. Useful when running against a Docker container where the log database is not directly accessible.
 
 ### With a Code Template
 
 ```bash
-python3 cli/excel_ingest_cli.py ingest \
+ingest-excel ingest \
   --schema-file ./test_schemas/sales_sample.schema.json \
   --excel-file ./test_excels/sales_sample.xlsx \
   --out-dir ./artifacts/sales \
@@ -143,7 +202,7 @@ The code template guides the LLM's generated script structure. See `template.py`
 Process all `.xlsx` files in a directory:
 
 ```bash
-python3 cli/excel_ingest_cli.py ingest-dir \
+ingest-excel ingest-dir \
   --schema-file ./test_schemas/sales_sample.schema.json \
   --excel-dir ./test_excels \
   --out-dir ./artifacts/batch
@@ -169,21 +228,33 @@ Excel + Schema
         │                regex_extract, concat, conditional, uppercase,
         ▼                lowercase, default_value, trim_whitespace, substring
   ┌─ LLM Validation ┐   GPT-4o-mini samples N rows, returns confidence + issues
-  └────────────────┘
+  └────────────────┘     (prompt instructs it not to flag dates — handled separately)
         │
         ▼
-  ┌─ Verification ──┐   Deterministic precheck + optional LLM narrative
+  ┌─ Verification ──┐   Always runs: deterministic precheck (null rates,
+  │  (deterministic)│   type mismatches, future dates) → report printed to stdout
   └────────────────┘
+        │ (--llm-verify)
+        ▼
+  ┌─ LLM Commentary ┐   GPT-4o-mini reviews precheck report + output data,
+  └────────────────┘     adds contextual commentary to the report
 ```
 
 ## Understanding the Outputs
 
 | File | Contents |
 |---|---|
-| `ingest_<name>.json` | Full API response: mapping, extracted rows, validation result, lineage, replay code |
-| `ingest_<name>.py` | Standalone Python script to re-run the ingest |
-| `output_<name>.json` | JSON output produced by running the replay script (only with `--verify`) |
-| `verification_report_<name>.md` | Quality report: field stats, anomalies, LLM narrative (only with `--verify`) |
+| `ingestion_report_<name>_<timestamp>.json` | Ingest payload: mapping, validation result, lineage, replay code (data rows stripped to keep file small) |
+| `extraction_code_<name>_<timestamp>.py` | Standalone Python script to re-run the ingest |
+| `extracted_data_<name>_<timestamp>.json` | JSON output produced by running the replay script |
+| `verify_report_<name>_<timestamp>.md` | Quality report: row count, field diagnostics, deterministic findings, and LLM commentary (if `--llm-verify`) |
+
+The deterministic report (printed to stdout on every run) includes:
+
+- **Summary**: row count, pass/fail status
+- **Numeric Diagnostics**: per-field null rates and type mismatch rates
+- **Deterministic Findings**: anomalies detected by prechecks (null required fields, type mismatches, future dates)
+- **LLM Narrative** (only with `--llm-verify`): contextual commentary from GPT-4o-mini
 
 ## Transforms Reference
 
@@ -212,20 +283,38 @@ The LLM selects from these transforms for each column mapping:
 
 ```bash
 # List recent runs
-python3 cli/excel_ingest_cli.py logs runs --limit 20
+ingest-excel logs runs --limit 20
 
 # Show events for a specific run
-python3 cli/excel_ingest_cli.py logs run --run-id run_abc123
+ingest-excel logs run --run-id run_abc123
 
 # Show LLM usage aggregates (last 24h)
-python3 cli/excel_ingest_cli.py logs usage --since-hours 24
+ingest-excel logs usage --since-hours 24
 
 # JSON output
-python3 cli/excel_ingest_cli.py logs runs --limit 20 --json
+ingest-excel logs runs --limit 20 --json
 ```
 
 ## Generating Sample Test Files
 
 ```bash
 python3 generate_test_excels.py --out-dir ./tmp_excels
+```
+
+## Development
+
+### Without Docker
+
+```bash
+pip install -r backend/requirements.in
+# or for editable installs:
+pip install -e .
+uvicorn backend.main:app --reload --port 8080
+```
+
+### Rebuilding Docker
+
+```bash
+docker compose build
+docker compose up -d
 ```

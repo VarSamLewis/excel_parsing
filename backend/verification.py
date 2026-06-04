@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Any
 
 
@@ -94,6 +94,12 @@ def run_precheck(
                 f"Field '{name}' has high type mismatch rate ({mismatch_rate:.1%})"
             )
 
+    # Future-date check for date fields
+    date_fields = [f for f in fields if str(f.get("field_type", "")).lower() == "date"]
+    for df in date_fields:
+        name = str(df.get("name", ""))
+        anomalies.extend(iss["issue"] for iss in _check_future_dates(name, rows))
+
     clean: bool = len(anomalies) == 0
     return {
         "row_count": row_count,
@@ -101,6 +107,49 @@ def run_precheck(
         "anomalies": anomalies,
         "clean": clean,
     }
+
+
+def _parse_date(value: object) -> date | None:
+    """Try to parse a value into a date object; args: value (object); returns: date | None."""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(text, fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
+def _check_future_dates(
+    field_name: str, rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Check for future dates in a date field; args: field_name (str), rows (list[dict]); returns: list[dict]."""
+    today = date.today()
+    issues: list[dict[str, Any]] = []
+    bad_rows: list[int] = []
+
+    for i, row in enumerate(rows):
+        value = row.get(field_name)
+        parsed = _parse_date(value)
+        if parsed and parsed > today:
+            bad_rows.append(i + 1)  # 1-indexed row number
+
+    if bad_rows:
+        issues.append(
+            {
+                "field": field_name,
+                "issue": f"Field '{field_name}' contains {len(bad_rows)} future date(s).",
+                "severity": "error",
+                "row_examples": bad_rows,
+            }
+        )
+
+    return issues
 
 
 def render_precheck_markdown(precheck: dict[str, Any], llm_section: str = "") -> str:

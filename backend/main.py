@@ -27,6 +27,7 @@ from backend.extractor.engine import extract
 from backend.file_store import LocalFileStore, get_file_store
 from backend.observability import configure_logging, OperationTimer, log_event
 from backend.verification import run_precheck, render_precheck_markdown
+from backend.log_store import get_events
 
 # Configure structured logging.
 configure_logging()
@@ -258,10 +259,13 @@ async def verify_ingestion(
     schema_json: str = Query(..., description="JSON-encoded schema definition"),
     generated_code: str = Query(..., description="Generated python ingestion code"),
     output_json: str = Query(..., description="JSON output produced by generated code"),
+    use_llm: bool = Query(
+        default=False, description="Whether to include LLM commentary on the report"
+    ),
     run_id: str = Query(default="", description="Optional run identifier"),
     user: dict[str, str] = Depends(get_user),
 ) -> dict[str, object]:
-    """Verify generated ingestion output; args: schema_json (str), generated_code (str), output_json (str), run_id (str), user (dict[str, str]); returns: dict[str, str]."""
+    """Verify generated ingestion output; args: schema_json (str), generated_code (str), output_json (str), use_llm (bool), run_id (str), user (dict[str, str]); returns: dict[str, str]."""
     _ = user
     log_event("verify_started", logger, run_id=run_id)
     try:
@@ -280,24 +284,39 @@ async def verify_ingestion(
         clean=precheck.get("clean", False),
     )
 
+    report_markdown: str = render_precheck_markdown(precheck)
     llm_used: bool = False
-    llm_section: str = ""
-    if not bool(precheck.get("clean", False)):
+    if use_llm:
         llm_used = True
         log_event("verify_llm_called", logger, run_id=run_id)
         llm_section = verify_generated_output(
             schema_json=schema_json,
             generated_code=generated_code,
             output_json=output_json,
+            precheck_report=report_markdown,
             run_id=run_id,
         )
-    report_markdown: str = render_precheck_markdown(precheck, llm_section=llm_section)
+        report_markdown = render_precheck_markdown(precheck, llm_section=llm_section)
     log_event("verify_completed", logger, run_id=run_id, llm_used=llm_used)
     return {
         "report_markdown": report_markdown,
         "precheck": precheck,
         "llm_used": llm_used,
     }
+
+
+# ── Logs ────────────────────────────────────────────────────────────
+
+
+@app.get("/logs/{run_id}")
+async def get_run_logs(
+    run_id: str,
+    user: dict[str, str] = Depends(get_user),
+) -> dict[str, object]:
+    """Fetch structured log events for a run; args: run_id (str), user (dict[str, str]); returns: dict[str, object]."""
+    _ = user
+    events = get_events(run_id)
+    return {"run_id": run_id, "events": events}
 
 
 # ── Extraction-only (manual override) ──────────────────────────────
