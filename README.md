@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/VarSamLewis/excel_parsing/actions/workflows/build-test-lint.yml/badge.svg)](https://github.com/VarSamLewis/excel_parsing/actions/workflows/build-test-lint.yml)
 
-Local-first Excel ingestion system with a FastAPI backend and Typer CLI.
+Local-first Excel ingestion system with a FastAPI backend and CLI client. If this proves useful I will build a web based client as well.
 
 Given an Excel file and a target schema, it can:
 
@@ -78,7 +78,8 @@ Outputs in `--out-dir`:
 ## To-Do
 
 - **Per-prompt model configurability**: Make each of the four prompt types independently configurable via separate env vars.
-- **Runtime artifacts in git**: Add `.gitignore` rules for `uploads/`, sqlite db, and generated files.
+- **Build frontendclient**: SImple web client to use.
+- **Add additional inference providers**: HuggingFace/Zen etc.
 
 ## Development
 
