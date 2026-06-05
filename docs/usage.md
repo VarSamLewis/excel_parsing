@@ -303,13 +303,35 @@ python3 generate_test_excels.py --out-dir ./tmp_excels
 
 ## Development
 
-### Without Docker
+### Set up environment
 
 ```bash
-pip install -r backend/requirements.in
-# or for editable installs:
-pip install -e .
-uvicorn backend.main:app --reload --port 8080
+uv venv
+source .venv/bin/activate
+uv pip install .
+uv pip install -r backend/requirements.in
+uv pip install black ruff mypy
+```
+
+### Run all checks
+
+```bash
+uv run black --check .       # formatting
+uv run ruff check .          # linting
+uv run mypy cli/ backend/    # type checking
+uv run pytest -v --tb=short  # tests
+```
+
+### Run backend without Docker
+
+```bash
+uv run uvicorn backend.main:app --reload --port 8080
+```
+
+### Run CLI without installing
+
+```bash
+uv run python3 cli/excel_ingest_cli.py health
 ```
 
 ### Rebuilding Docker

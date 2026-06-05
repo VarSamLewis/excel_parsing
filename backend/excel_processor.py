@@ -73,9 +73,7 @@ def summarise_sheet(
     if sheet_name:
         if sheet_name not in wb.sheetnames:
             wb.close()
-            raise ValueError(
-                f"Sheet '{sheet_name}' not found. Available: {wb.sheetnames}"
-            )
+            raise ValueError(f"Sheet '{sheet_name}' not found. Available: {wb.sheetnames}")
         ws: Worksheet = wb[sheet_name]
     else:
         ws = wb.active
@@ -113,11 +111,7 @@ def summarise_sheet(
             header_row_idx = idx
             break
 
-    headers = (
-        all_rows[header_row_idx]
-        if header_row_idx < len(all_rows)
-        else [None] * col_count
-    )
+    headers = all_rows[header_row_idx] if header_row_idx < len(all_rows) else [None] * col_count
     data_rows = all_rows[header_row_idx + 1 :]
 
     column_summaries = []
@@ -149,9 +143,7 @@ def summarise_sheet(
         # First and last values
         first_vals = [str(v) for v in values[:max_sample_values]]
         last_vals = (
-            [str(v) for v in values[-max_sample_values:]]
-            if len(values) > max_sample_values
-            else []
+            [str(v) for v in values[-max_sample_values:]] if len(values) > max_sample_values else []
         )
 
         # Type analysis
@@ -159,9 +151,7 @@ def summarise_sheet(
         dominant_type = type_counts.most_common(1)[0][0]
         type_inconsistencies = None
         if len(type_counts) > 1:
-            minority_types = {
-                t: c for t, c in type_counts.items() if t != dominant_type
-            }
+            minority_types = {t: c for t, c in type_counts.items() if t != dominant_type}
             type_inconsistencies = (
                 f"Mostly {dominant_type} ({type_counts[dominant_type]}/{len(values)}) "
                 f"but also: {', '.join(f'{t} ({c})' for t, c in minority_types.items())}"

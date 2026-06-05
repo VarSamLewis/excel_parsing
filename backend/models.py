@@ -12,7 +12,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Enums ───────────────────────────────────────────────────────────
 
 
@@ -66,25 +65,17 @@ class SchemaField(BaseModel):
             "'full legal name of the company, may appear as client, buyer or account name'"
         ),
     )
-    required: bool = Field(
-        default=True, description="Whether this field must be present"
-    )
+    required: bool = Field(default=True, description="Whether this field must be present")
 
 
 class SchemaDefinition(BaseModel):
     """A complete user-defined schema (the set of fields to extract)."""
 
     id: str = Field(default="", description="Schema ID (set by the server on save)")
-    name: str = Field(
-        ..., description="Human-readable schema name, e.g. 'Acme Q1 Report'"
-    )
-    fields: list[SchemaField] = Field(
-        ..., min_length=1, description="Fields to extract"
-    )
+    name: str = Field(..., description="Human-readable schema name, e.g. 'Acme Q1 Report'")
+    fields: list[SchemaField] = Field(..., min_length=1, description="Fields to extract")
     user_id: str = Field(default="", description="Owner identifier")
-    version: int = Field(
-        default=1, description="Schema version, auto-incremented on update"
-    )
+    version: int = Field(default=1, description="Schema version, auto-incremented on update")
     created_at: datetime | None = Field(default=None)
     updated_at: datetime | None = Field(default=None)
 
@@ -126,13 +117,9 @@ class ExcelMapping(BaseModel):
     """
 
     sheet_name: str = Field(..., description="Name of the sheet to extract from")
-    header_row: int = Field(
-        ..., ge=1, description="1-indexed row number containing headers"
-    )
+    header_row: int = Field(..., ge=1, description="1-indexed row number containing headers")
     data_start_row: int = Field(..., ge=1, description="1-indexed first row of data")
-    mappings: list[ColumnMapping] = Field(
-        ..., min_length=1, description="Column-to-field mappings"
-    )
+    mappings: list[ColumnMapping] = Field(..., min_length=1, description="Column-to-field mappings")
     reasoning: str = Field(
         default="",
         description="LLM explanation of how it determined the mapping",
@@ -204,9 +191,7 @@ class IngestResponse(BaseModel):
     success: bool = True
     excel_hash: str = ""
     schema_id: str = ""
-    schema_version: int = Field(
-        default=1, description="Schema version used for extraction"
-    )
+    schema_version: int = Field(default=1, description="Schema version used for extraction")
     sheet_names: list[str] = Field(
         default_factory=list, description="All sheet names in the workbook"
     )
@@ -219,9 +204,7 @@ class IngestResponse(BaseModel):
     data: list[dict[str, Any]] = Field(default_factory=list)
     lineage: list[RowLineage] = Field(default_factory=list)
     row_count: int = 0
-    file_storage_path: str = Field(
-        default="", description="Path to the stored Excel file"
-    )
+    file_storage_path: str = Field(default="", description="Path to the stored Excel file")
     replay_code: str = Field(
         default="",
         description="Runnable Python code that replays this ingest request and writes JSON output",

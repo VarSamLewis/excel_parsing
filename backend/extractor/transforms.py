@@ -314,8 +314,6 @@ def apply_transform(
     elif transform_name in PARAMETERISED_TRANSFORMS:
         return PARAMETERISED_TRANSFORMS[transform_name](value, params=params)
     elif transform_name in ROW_AWARE_TRANSFORMS:
-        return ROW_AWARE_TRANSFORMS[transform_name](
-            value, params=params, row_data=row_data
-        )
+        return ROW_AWARE_TRANSFORMS[transform_name](value, params=params, row_data=row_data)
     else:
         raise KeyError(f"Unknown transform: {transform_name}")

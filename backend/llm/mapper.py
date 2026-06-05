@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
 
 from backend.config import settings
 from backend.models import ExcelMapping, SchemaDefinition
 from backend.llm.client import call_with_retry, get_client
 from backend.llm.prompts import build_mapper_prompt, build_codegen_prompt
 from backend.excel_processor import summarise_sheet
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -111,9 +111,7 @@ def generate_ingest_code(
     code_template: str | None = None,
 ) -> str:
     """Generate Python ingest script; args: file_bytes (bytes), schema (SchemaDefinition), sheet_name (str), code_template (str | None); returns: str."""
-    sheet_summary: dict[str, object] = summarise_sheet(
-        file_bytes, sheet_name=sheet_name
-    )
+    sheet_summary: dict[str, object] = summarise_sheet(file_bytes, sheet_name=sheet_name)
     fields_dicts: list[dict[str, object]] = [
         {
             "name": field.name,

@@ -1,5 +1,7 @@
 # ingest-excel
 
+[![CI](https://github.com/VarSamLewis/excel_parsing/actions/workflows/build-test-lint.yml/badge.svg)](https://github.com/VarSamLewis/excel_parsing/actions/workflows/build-test-lint.yml)
+
 Local-first Excel ingestion system with a FastAPI backend and Typer CLI.
 
 Given an Excel file and a target schema, it can:
@@ -33,10 +35,12 @@ cp .env.example backend/.env
 docker compose up -d
 ```
 
-### CLI (pip install)
+### CLI (with uv — recommended)
 
 ```bash
-pip install -e .
+uv venv
+source .venv/bin/activate
+uv pip install .
 ingest-excel health
 ingest-excel ingest \
   --schema-file ./test_schemas/people_sample.schema.json \
@@ -44,34 +48,11 @@ ingest-excel ingest \
   --out-dir ./artifacts/people
 ```
 
-With LLM commentary on the verification report:
+### CLI (with pip)
 
 ```bash
-ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
-  --out-dir ./artifacts/people \
-  --llm-verify
-```
-
-With debug logging:
-
-```bash
-ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
-  --out-dir ./artifacts/people \
-  --debug
-```
-
-Or without installing:
-
-```bash
-pip install typer httpx
-python3 cli/excel_ingest_cli.py ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
-  --out-dir ./artifacts/people
+pip install -e .
+ingest-excel health
 ```
 
 ## CLI Commands
@@ -99,8 +80,27 @@ Outputs in `--out-dir`:
 - **Per-prompt model configurability**: Make each of the four prompt types independently configurable via separate env vars.
 - **Runtime artifacts in git**: Add `.gitignore` rules for `uploads/`, sqlite db, and generated files.
 
-## Tests
+## Development
+
+### Prerequisites
 
 ```bash
-pytest backend/tests -q
+uv venv
+source .venv/bin/activate
+uv pip install .
+uv pip install -r backend/requirements.in
+uv pip install black ruff mypy
 ```
+
+### Run all checks
+
+```bash
+uv run black --check .       # formatting
+uv run ruff check .          # linting
+uv run mypy cli/ backend/    # type checking
+uv run pytest -v --tb=short  # tests
+```
+
+### CI
+
+The repository includes a GitHub Actions workflow (`.github/workflows/build-test-lint.yml`) that runs all four checks on every push/PR to `master`. The `TestLogsCli` subprocess tests are automatically skipped in CI (they require a local SQLite database).

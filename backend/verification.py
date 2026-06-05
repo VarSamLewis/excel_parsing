@@ -39,9 +39,7 @@ def _matches_type(field_type: str, value: object) -> bool:
     return True
 
 
-def run_precheck(
-    schema_data: dict[str, Any], rows: list[dict[str, Any]]
-) -> dict[str, Any]:
+def run_precheck(schema_data: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Run deterministic checks; args: schema_data (dict[str, Any]), rows (list[dict[str, Any]]); returns: dict[str, Any]."""
     fields_raw: object = schema_data.get("fields", [])
     fields: list[dict[str, Any]] = fields_raw if isinstance(fields_raw, list) else []
@@ -86,13 +84,9 @@ def run_precheck(
         )
 
         if required and null_count > 0:
-            anomalies.append(
-                f"Required field '{name}' has {null_count} null/empty values"
-            )
+            anomalies.append(f"Required field '{name}' has {null_count} null/empty values")
         if mismatch_rate > 0.05:
-            anomalies.append(
-                f"Field '{name}' has high type mismatch rate ({mismatch_rate:.1%})"
-            )
+            anomalies.append(f"Field '{name}' has high type mismatch rate ({mismatch_rate:.1%})")
 
     # Future-date check for date fields
     date_fields = [f for f in fields if str(f.get("field_type", "")).lower() == "date"]
@@ -125,9 +119,7 @@ def _parse_date(value: object) -> date | None:
     return None
 
 
-def _check_future_dates(
-    field_name: str, rows: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+def _check_future_dates(field_name: str, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Check for future dates in a date field; args: field_name (str), rows (list[dict]); returns: list[dict]."""
     today = date.today()
     issues: list[dict[str, Any]] = []
@@ -158,9 +150,7 @@ def render_precheck_markdown(precheck: dict[str, Any], llm_section: str = "") ->
     lines.append("## Summary")
     lines.append("")
     lines.append(f"- Rows produced: {precheck.get('row_count', 0)}")
-    lines.append(
-        f"- Deterministic status: {'PASS' if precheck.get('clean') else 'FAIL'}"
-    )
+    lines.append(f"- Deterministic status: {'PASS' if precheck.get('clean') else 'FAIL'}")
     lines.append("")
     lines.append("## Numeric Diagnostics")
     lines.append("")
