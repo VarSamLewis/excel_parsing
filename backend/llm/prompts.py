@@ -4,7 +4,7 @@ Prompts are plain strings with {placeholders} for .format() substitution.
 No LLM calls happen here.
 """
 
-from typing import cast
+from typing import Any, cast
 
 # ── Mapper (GPT-4o) ────────────────────────────────────────────────
 
@@ -237,8 +237,8 @@ def format_column_summaries(columns: list[dict[str, object]]) -> str:
 
 def build_mapper_prompt(
     schema_name: str,
-    fields: list[dict[str, object]],
-    sheet_summary: dict[str, object],
+    fields: list[dict[str, Any]],
+    sheet_summary: dict[str, Any],
 ) -> tuple[str, str]:
     """Build mapper prompts; args: schema_name (str), fields (list[dict[str, object]]), sheet_summary (dict[str, object]); returns: tuple[str, str]."""
     fields_text: str = format_fields_for_prompt(fields)
@@ -260,8 +260,8 @@ def build_mapper_prompt(
 
 
 def build_validator_prompt(
-    fields: list[dict[str, object]],
-    data_sample: list[dict[str, object]],
+    fields: list[dict[str, Any]],
+    data_sample: list[dict[str, Any]],
 ) -> tuple[str, str]:
     """Build validator prompts; args: fields (list[dict[str, object]]), data_sample (list[dict[str, object]]); returns: tuple[str, str]."""
     fields_text: str = format_fields_for_prompt(fields)
@@ -271,9 +271,7 @@ def build_validator_prompt(
     i: int
     row: dict[str, object]
     for i, row in enumerate(data_sample):
-        row_parts: list[str] = [
-            f"{k}: {v}" for k, v in row.items() if not k.startswith("_")
-        ]
+        row_parts: list[str] = [f"{k}: {v}" for k, v in row.items() if not k.startswith("_")]
         data_lines.append(f"Row {i + 1}: {{ {', '.join(row_parts)} }}")
     data_text: str = "\n".join(data_lines)
 
@@ -310,7 +308,9 @@ def build_codegen_prompt(
         sheet_summary_text=sheet_summary_text,
     )
     if code_template:
-        base_prompt += f"\n\n## Code structure to follow\n\nFollow this structure exactly:\n\n{code_template}"
+        base_prompt += (
+            f"\n\n## Code structure to follow\n\nFollow this structure exactly:\n\n{code_template}"
+        )
     return CODEGEN_SYSTEM_PROMPT, base_prompt
 
 

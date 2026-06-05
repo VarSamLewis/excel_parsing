@@ -22,9 +22,7 @@ class StructuredJsonFormatter(logging.Formatter):
     def format(self: "StructuredJsonFormatter", record: logging.LogRecord) -> str:
         """Format log record as JSON; args: record (logging.LogRecord); returns: str."""
         log_entry: dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(
-                record.created, tz=timezone.utc
-            ).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -105,7 +103,7 @@ class OperationTimer:
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: object | None,
-    ) -> bool:
+    ) -> None:
         """Exit timer context and log duration; args: exc_type (type[BaseException] | None), exc_val (BaseException | None), exc_tb (object | None); returns: bool."""
         duration_ms: float = (time.perf_counter() - self._start) * 1000
         extra: dict[str, Any] = {
@@ -136,7 +134,7 @@ class OperationTimer:
                 duration_ms,
                 extra=extra,
             )
-        return False  # Don't suppress exceptions
+        return  # Don't suppress exceptions
 
 
 def log_event(

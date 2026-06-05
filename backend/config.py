@@ -8,15 +8,11 @@ class Settings(BaseSettings):
     """Central configuration – every env var the app needs."""
 
     openai_api_key: str = Field(default="", description="OpenAI API key")
-    openai_model_mapper: str = Field(
-        default="gpt-4o", description="Model name for mapping"
-    )
+    openai_model_mapper: str = Field(default="gpt-4o", description="Model name for mapping")
     openai_model_validator: str = Field(
         default="gpt-4o-mini", description="Model name for validation"
     )
-    openai_base_url: str = Field(
-        default="", description="Optional OpenAI-compatible base URL"
-    )
+    openai_base_url: str = Field(default="", description="Optional OpenAI-compatible base URL")
     log_level: str = Field(default="INFO", description="Logging level")
 
     model_config = {

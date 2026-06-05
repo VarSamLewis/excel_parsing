@@ -81,3 +81,5 @@ def call_with_retry(client: OpenAI, step: str, run_id: str = "", **kwargs: Any) 
                 e,
             )
             time.sleep(delay)
+
+    raise RuntimeError(f"LLM call failed after {1 + MAX_RETRIES} attempts")

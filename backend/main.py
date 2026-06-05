@@ -108,9 +108,7 @@ async def ingest(
     run_id: str = f"run_{uuid.uuid4().hex[:12]}"
     user_id: str = user.get("oid", "local-dev-user")
 
-    log_event(
-        "ingest_started", logger, file_hash=file_hash, user_id=user_id, run_id=run_id
-    )
+    log_event("ingest_started", logger, file_hash=file_hash, user_id=user_id, run_id=run_id)
 
     # Parse schema from query param
     try:
@@ -199,9 +197,7 @@ async def ingest(
         try:
             validation = validate_extraction(schema, data_rows, run_id=run_id)
         except Exception as e:
-            logger.warning(
-                "Validation failed for sheet '%s' (non-fatal): %s", sheet_name, e
-            )
+            logger.warning("Validation failed for sheet '%s' (non-fatal): %s", sheet_name, e)
             validation = None
 
     log_event(
@@ -342,6 +338,7 @@ async def extract_with_file(
 
     # Get file bytes: from upload or from storage
     storage_path = ""
+    file_bytes: bytes | None = None
     if file is not None:
         file_bytes = await file.read()
         file_hash = compute_file_hash(file_bytes)
@@ -353,6 +350,7 @@ async def extract_with_file(
                 status_code=404,
                 detail="File not found in storage. Please re-upload.",
             )
+        assert file_bytes is not None
         file_hash = excel_hash
         storage_path = fstore.store_file(user_id, file_hash, file_bytes)
     else:

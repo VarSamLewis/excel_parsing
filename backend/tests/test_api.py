@@ -15,7 +15,6 @@ os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from backend.main import app
 
-
 client = TestClient(app)
 
 

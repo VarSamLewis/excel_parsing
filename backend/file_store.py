@@ -28,9 +28,7 @@ class LocalFileStore:
         user_dir.mkdir(parents=True, exist_ok=True)
         return user_dir / f"{file_hash}.xlsx"
 
-    def store_file(
-        self: "LocalFileStore", user_id: str, file_hash: str, file_bytes: bytes
-    ) -> str:
+    def store_file(self: "LocalFileStore", user_id: str, file_hash: str, file_bytes: bytes) -> str:
         """Store file bytes if missing; args: user_id (str), file_hash (str), file_bytes (bytes); returns: str."""
         path: Path = self._file_path(user_id, file_hash)
         if path.exists():
@@ -40,9 +38,7 @@ class LocalFileStore:
         logger.info("Stored file locally: %s (%d bytes)", path, len(file_bytes))
         return str(path)
 
-    def retrieve_file(
-        self: "LocalFileStore", user_id: str, file_hash: str
-    ) -> bytes | None:
+    def retrieve_file(self: "LocalFileStore", user_id: str, file_hash: str) -> bytes | None:
         """Retrieve file bytes when available; args: user_id (str), file_hash (str); returns: bytes | None."""
         path: Path = self._file_path(user_id, file_hash)
         if not path.exists():

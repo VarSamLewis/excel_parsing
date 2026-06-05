@@ -26,8 +26,7 @@ def init_log_store() -> None:
     """Create sqlite log tables; args: none; returns: None."""
     con: sqlite3.Connection = _conn()
     cur: sqlite3.Cursor = con.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             created_at TEXT NOT NULL,
@@ -37,10 +36,8 @@ def init_log_store() -> None:
             duration_ms REAL,
             metadata_json TEXT
         )
-        """
-    )
-    cur.execute(
-        """
+        """)
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS llm_usage (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             created_at TEXT NOT NULL,
@@ -55,16 +52,11 @@ def init_log_store() -> None:
             retries INTEGER,
             error TEXT
         )
-        """
-    )
+        """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_events_run_id ON events(run_id)")
-    cur.execute(
-        "CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at)"
-    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_llm_usage_run_id ON llm_usage(run_id)")
-    cur.execute(
-        "CREATE INDEX IF NOT EXISTS idx_llm_usage_created_at ON llm_usage(created_at)"
-    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_llm_usage_created_at ON llm_usage(created_at)")
     con.commit()
     con.close()
 

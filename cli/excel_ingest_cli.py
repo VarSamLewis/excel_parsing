@@ -31,9 +31,7 @@ def _log_conn() -> sqlite3.Connection:
 
 def _backend_url(cli_value: str | None) -> str:
     """Resolve backend URL; args: cli_value (str | None); returns: str."""
-    return (
-        cli_value or os.environ.get("BACKEND_URL") or "http://localhost:8080"
-    ).rstrip("/")
+    return (cli_value or os.environ.get("BACKEND_URL") or "http://localhost:8080").rstrip("/")
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -107,9 +105,7 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _default_replay_script(
-    *, backend_url: str, schema_path: Path, excel_path: Path
-) -> str:
+def _default_replay_script(*, backend_url: str, schema_path: Path, excel_path: Path) -> str:
     """Build fallback replay script; args: backend_url (str), schema_path (Path), excel_path (Path); returns: str."""
     return f"""#!/usr/bin/env python3
 import json
