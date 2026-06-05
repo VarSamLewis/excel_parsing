@@ -6,6 +6,7 @@ These tests run in local-only mode.
 import json
 import os
 import subprocess
+import unittest
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
@@ -18,14 +19,14 @@ from backend.main import app
 client = TestClient(app)
 
 
-class TestHealth:
+class TestHealth(unittest.TestCase):
     def test_health_returns_ok(self):
         response = client.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
 
-class TestIngest:
+class TestIngest(unittest.TestCase):
     """Test the /ingest endpoint with a mocked LLM call."""
 
     @patch("backend.main.generate_ingest_code")
@@ -117,7 +118,7 @@ class TestIngest:
         assert data["schema_version"] >= 1
 
 
-class TestVerify:
+class TestVerify(unittest.TestCase):
     """Test verify endpoint with mocked LLM verifier."""
 
     @patch("backend.main.verify_generated_output")
@@ -214,7 +215,8 @@ class TestVerify:
         mock_verify.assert_not_called()
 
 
-class TestLogsCli:
+@unittest.skipIf(os.environ.get("CI"), "CLI subprocess tests require local DB fixture")
+class TestLogsCli(unittest.TestCase):
     """E2E tests for CLI logs commands."""
 
     def test_logs_commands(self):
