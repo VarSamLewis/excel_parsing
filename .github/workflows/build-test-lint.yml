@@ -37,23 +37,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install uv
-        run: pip install uv
-
       - name: Install dependencies
         run: |
-          uv pip install .
-          uv pip install -r backend/requirements.in
-          uv pip install black ruff mypy
+          pip install .
+          pip install -r backend/requirements.in
+          pip install black ruff mypy pytest
 
       - name: Check formatting with black
-        run: uv run black --check .
+        run: black --check .
 
       - name: Lint with ruff
-        run: uv run ruff check .
+        run: ruff check .
 
       - name: Type check with mypy
-        run: uv run mypy cli/ backend/
+        run: mypy cli/ backend/
 
       - name: Test with pytest
-        run: uv run pytest -v --tb=short
+        run: pytest -v --tb=short
