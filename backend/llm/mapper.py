@@ -132,7 +132,7 @@ def generate_ingest_code(
         code_template=code_template,
     )
     client: OpenAI = get_client()
-    raw_content: str = _call_with_retry(
+    raw_content: str = call_with_retry(
         client,
         step="codegen",
         run_id=run_id,
