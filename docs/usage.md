@@ -306,20 +306,25 @@ python3 generate_test_excels.py --out-dir ./tmp_excels
 ### Set up environment
 
 ```bash
-uv venv
-source .venv/bin/activate
-uv pip install .
-uv pip install -r backend/requirements.in
-uv pip install black ruff mypy
+make install
 ```
 
-### Run all checks
+This creates a uv venv (if missing) and installs everything — the project, backend deps, and dev tools (black, ruff, mypy, pytest).
+
+### Run all checks (same as CI pipeline)
 
 ```bash
-uv run black --check .       # formatting
-uv run ruff check .          # linting
-uv run mypy cli/ backend/    # type checking
-uv run pytest -v --tb=short  # tests
+make ci
+```
+
+Runs lint → typecheck → test in sequence, exactly like the GitHub Actions workflow.
+
+### Individual commands
+
+```bash
+make lint       # black --check . + ruff check .
+make typecheck  # mypy cli/ backend/
+make test       # pytest -v --tb=short
 ```
 
 ### Run backend without Docker
