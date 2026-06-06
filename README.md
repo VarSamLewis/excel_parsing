@@ -43,8 +43,8 @@ source .venv/bin/activate
 uv pip install .
 ingest-excel health
 ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
+  --schema-file ./tests/schemas/people_sample.schema.json \
+  --excel-file ./tests/excels/people_sample.xlsx \
   --out-dir ./artifacts/people
 ```
 
