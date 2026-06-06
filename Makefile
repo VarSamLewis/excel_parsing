@@ -13,7 +13,13 @@ lint:
 typecheck:
 	uv run mypy cli/ backend/
 
+
 test:
-	uv run pytest -v --tb=short
+	docker compose up -d
+	sleep 2
+	uv run pytest -v --tb=short 
+	uv run tests/accept_outputs.py
+	docker compose down
+
 
 ci: lint typecheck test

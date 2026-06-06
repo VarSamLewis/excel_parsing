@@ -35,7 +35,10 @@ strict = false
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["backend/tests"]
+testpaths = ["backend/tests", "tests"]
 python_files = ["test_*.py"]
 log_cli_level = "WARNING"
 filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "e2e: end-to-end tests (requires running backend + OPENAI_API_KEY)",
+]

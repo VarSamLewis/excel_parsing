@@ -43,8 +43,8 @@ source .venv/bin/activate
 uv pip install .
 ingest-excel health
 ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
+  --schema-file ./tests/schemas/people_sample.schema.json \
+  --excel-file ./tests/excels/people_sample.xlsx \
   --out-dir ./artifacts/people
 ```
 
@@ -99,9 +99,9 @@ uv pip install black ruff mypy
 uv run black --check .       # formatting
 uv run ruff check .          # linting
 uv run mypy cli/ backend/    # type checking
-uv run pytest -v --tb=short  # tests
+uv run pytest -v --tb=short   # e2e tests (skipped without OPENAI_API_KEY)
 ```
 
 ### CI
 
-The repository includes a GitHub Actions workflow (`.github/workflows/build-test-lint.yml`) that runs all four checks on every push/PR to `master`. The `TestLogsCli` subprocess tests are automatically skipped in CI (they require a local SQLite database).
+The repository includes a GitHub Actions workflow (`.github/workflows/build-test-lint.yml`) that runs all four checks on every push/PR to `master`. E2E tests are automatically skipped in CI (they require `OPENAI_API_KEY` and a running backend).

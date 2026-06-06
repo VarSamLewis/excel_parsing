@@ -31,8 +31,8 @@ This installs the `ingest-excel` command globally (in your current venv/system):
 ingest-excel --help
 ingest-excel health
 ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
+  --schema-file ./tests/schemas/people_sample.schema.json \
+  --excel-file ./tests/excels/people_sample.xlsx \
   --out-dir ./artifacts/people
 ```
 
@@ -105,7 +105,7 @@ python3 cli/excel_ingest_cli.py health
 
 ## Schema Format
 
-Schemas are JSON files. Example (`test_schemas/people_sample.schema.json`):
+Schemas are JSON files. Example (`tests/schemas/people_sample.schema.json`):
 
 ```json
 {
@@ -147,8 +147,8 @@ Schemas are JSON files. Example (`test_schemas/people_sample.schema.json`):
 
 ```bash
 ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
+  --schema-file ./tests/schemas/people_sample.schema.json \
+  --excel-file ./tests/excels/people_sample.xlsx \
   --out-dir ./artifacts/people
 ```
 
@@ -165,8 +165,8 @@ The deterministic verification (replay script + precheck) always runs. The repor
 
 ```bash
 ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
+  --schema-file ./tests/schemas/people_sample.schema.json \
+  --excel-file ./tests/excels/people_sample.xlsx \
   --out-dir ./artifacts/people \
   --llm-verify
 ```
@@ -177,8 +177,8 @@ Deterministic verification (null rates, type mismatches, future dates) runs on e
 
 ```bash
 ingest-excel ingest \
-  --schema-file ./test_schemas/people_sample.schema.json \
-  --excel-file ./test_excels/people_sample.xlsx \
+  --schema-file ./tests/schemas/people_sample.schema.json \
+  --excel-file ./tests/excels/people_sample.xlsx \
   --out-dir ./artifacts/people \
   --debug
 ```
@@ -189,8 +189,8 @@ Prints structured log events (timestamps, levels, event names, durations) to std
 
 ```bash
 ingest-excel ingest \
-  --schema-file ./test_schemas/sales_sample.schema.json \
-  --excel-file ./test_excels/sales_sample.xlsx \
+  --schema-file ./tests/schemas/sales_sample.schema.json \
+  --excel-file ./tests/excels/sales_sample.xlsx \
   --out-dir ./artifacts/sales \
   --code-template ./template.py
 ```
@@ -203,8 +203,8 @@ Process all `.xlsx` files in a directory:
 
 ```bash
 ingest-excel ingest-dir \
-  --schema-file ./test_schemas/sales_sample.schema.json \
-  --excel-dir ./test_excels \
+  --schema-file ./tests/schemas/sales_sample.schema.json \
+  --excel-dir ./tests/excels \
   --out-dir ./artifacts/batch
 ```
 
@@ -298,7 +298,7 @@ ingest-excel logs runs --limit 20 --json
 ## Generating Sample Test Files
 
 ```bash
-python3 generate_test_excels.py --out-dir ./tmp_excels
+python3 tests/generate_test_excels.py --out-dir ./tests/excels
 ```
 
 ## Development

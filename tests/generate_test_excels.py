@@ -45,7 +45,7 @@ def _write_people_workbook(path: Path) -> None:
 def main() -> int:
     """Generate sample Excel set; args: none; returns: int."""
     parser: argparse.ArgumentParser = argparse.ArgumentParser()
-    parser.add_argument("--out-dir", default="test_excels", help="Output directory")
+    parser.add_argument("--out-dir", default="tests/excels", help="Output directory")
     args: argparse.Namespace = parser.parse_args()
     out_dir: Path = Path(str(args.out_dir))
     out_dir.mkdir(parents=True, exist_ok=True)
